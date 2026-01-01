@@ -1067,7 +1067,7 @@ mod tests {
         println!("\n========== 测试获取单个期货合约实时数据 ==========");
         
         let service = FuturesService::new();
-        let symbol = "CU2501"; // 铜期货合约
+        let symbol = "CU2602"; // 铜期货合约（2026年2月）
         
         println!("正在获取合约 {} 的实时数据...", symbol);
         
@@ -1104,9 +1104,9 @@ mod tests {
         
         let service = FuturesService::new();
         let symbols = vec![
-            "CU2501".to_string(),  // 铜
-            "AL2501".to_string(),  // 铝
-            "RB2501".to_string(),  // 螺纹钢
+            "CU2602".to_string(),  // 铜（2026年2月）
+            "AL2602".to_string(),  // 铝
+            "RB2605".to_string(),  // 螺纹钢
         ];
         
         println!("正在批量获取合约 {:?} 的实时数据...", symbols);
@@ -1139,7 +1139,7 @@ mod tests {
         println!("\n========== 测试获取金融期货实时数据 ==========");
         
         let service = FuturesService::new();
-        let symbol = "IF2501"; // 沪深300股指期货
+        let symbol = "IF2601"; // 沪深300股指期货
         
         println!("正在获取金融期货 {} 的实时数据...", symbol);
         println!("(金融期货使用 CFF_ 前缀)");
