@@ -2925,8 +2925,18 @@ pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
 /// 数据来源: http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html
 /// date: 交易日期，格式 YYYYMMDD，数据从 20060104 开始
 /// vars_list: 品种代码列表，如 ["M", "Y"]，为空时返回所有品种
+/// 注意: 大商所API有反爬虫机制，可能需要特殊的cookie或认证
 pub async fn get_dce_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
-    let client = Client::new();
+    let client = Client::builder()
+        .cookie_store(true)
+        .build()?;
+    
+    // 先访问主页获取cookie
+    let _home_resp = client
+        .get("http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .send()
+        .await;
     
     let payload = serde_json::json!({
         "tradeDate": date,
@@ -2941,11 +2951,24 @@ pub async fn get_dce_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> Res
     let response = client
         .post(DCE_VOL_RANK_URL)
         .json(&payload)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "application/json, text/plain, */*")
+        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .header("Accept-Encoding", "gzip, deflate")
+        .header("Origin", "http://www.dce.com.cn")
+        .header("Referer", "http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html")
+        .header("Connection", "keep-alive")
         .send()
         .await?;
 
     if !response.status().is_success() {
+        // 大商所API有反爬虫机制，返回更友好的错误信息
+        if response.status().as_u16() == 412 {
+            return Err(anyhow!(
+                "大商所API访问被拒绝(412)，该交易所有反爬虫机制。\n\
+                建议: 1) 稍后重试 2) 使用浏览器手动下载数据 3) 使用akshare的futures_dce_position_rank()接口"
+            ));
+        }
         return Err(anyhow!("获取大商所持仓排名数据失败: {}", response.status()));
     }
 
