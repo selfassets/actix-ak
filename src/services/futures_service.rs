@@ -365,29 +365,360 @@ impl FuturesService {
     }
 }
 
-// 模拟历史数据获取（新浪不直接提供历史数据API）
+// 获取期货历史数据（通过新浪API）
+// 新浪提供分钟和日线数据接口
 pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<Vec<FuturesHistoryData>> {
-    // 这里可以集成其他提供历史数据的API，如Wind、同花顺等
-    // 目前返回模拟数据
-    let mut history = Vec::new();
+    let client = Client::new();
     let limit = query.limit.unwrap_or(30);
     
-    for i in 0..limit {
-        let base_price = 60000.0;
-        let variation = (i as f64 * 50.0) - 1500.0;
-        
-        history.push(FuturesHistoryData {
-            symbol: symbol.to_string(),
-            date: format!("2024-03-{:02}", i + 1),
-            open: base_price + variation,
-            high: base_price + variation + 200.0,
-            low: base_price + variation - 150.0,
-            close: base_price + variation + 50.0,
-            volume: 100_000 + (i as u64 * 5_000),
-            settlement: Some(base_price + variation + 25.0),
-            open_interest: Some(500_000 + (i as u64 * 1_000)),
-        });
+    // 新浪期货日线数据API
+    let url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20_temp=/InnerFuturesNewService.getDailyKLine";
+    
+    let response = client
+        .get(url)
+        .query(&[("symbol", symbol)])
+        .header("Referer", "https://finance.sina.com.cn/")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("Failed to fetch history data: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    parse_sina_history_data(&text, symbol, limit)
+}
+
+// 获取期货分钟数据
+pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<FuturesHistoryData>> {
+    let client = Client::new();
+    
+    // period: "1", "5", "15", "30", "60" 分钟
+    let url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewService.getFewMinLine";
+    
+    let response = client
+        .get(url)
+        .query(&[("symbol", symbol), ("type", period)])
+        .header("Referer", "https://finance.sina.com.cn/")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("Failed to fetch minute data: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    parse_sina_minute_data(&text, symbol)
+}
+
+// 解析新浪期货日线历史数据
+fn parse_sina_history_data(data: &str, symbol: &str, limit: usize) -> Result<Vec<FuturesHistoryData>> {
+    // 数据格式: var _temp=([["2024-01-02","75000","75500","74800","75100","100000","50000","75050"],...]);
+    let mut history = Vec::new();
+    
+    // 提取JSON数组部分
+    let start = data.find("([");
+    let end = data.rfind("])");
+    
+    if start.is_none() || end.is_none() {
+        return Err(anyhow!("Invalid history data format"));
+    }
+    
+    let json_str = &data[start.unwrap() + 1..end.unwrap() + 1];
+    let json_data: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
+    
+    if let Some(arr) = json_data.as_array() {
+        for (i, item) in arr.iter().rev().take(limit).enumerate() {
+            if let Some(fields) = item.as_array() {
+                if fields.len() >= 8 {
+                    history.push(FuturesHistoryData {
+                        symbol: symbol.to_string(),
+                        date: fields[0].as_str().unwrap_or("").to_string(),
+                        open: fields[1].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        high: fields[2].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        low: fields[3].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        close: fields[4].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        volume: fields[5].as_str().unwrap_or("0").parse().unwrap_or(0),
+                        open_interest: fields[6].as_str().unwrap_or("0").parse().ok(),
+                        settlement: fields[7].as_str().unwrap_or("0").parse().ok(),
+                    });
+                }
+            }
+        }
+    }
+    
+    // 按日期正序排列
+    history.reverse();
+    Ok(history)
+}
+
+// 解析新浪期货分钟数据
+fn parse_sina_minute_data(data: &str, symbol: &str) -> Result<Vec<FuturesHistoryData>> {
+    // 数据格式: =([["2024-01-02 09:00","75000","75500","74800","75100","100000","50000"],...]);
+    let mut history = Vec::new();
+    
+    let start = data.find("([");
+    let end = data.rfind("])");
+    
+    if start.is_none() || end.is_none() {
+        return Err(anyhow!("Invalid minute data format"));
+    }
+    
+    let json_str = &data[start.unwrap() + 1..end.unwrap() + 1];
+    let json_data: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
+    
+    if let Some(arr) = json_data.as_array() {
+        for item in arr.iter() {
+            if let Some(fields) = item.as_array() {
+                if fields.len() >= 7 {
+                    history.push(FuturesHistoryData {
+                        symbol: symbol.to_string(),
+                        date: fields[0].as_str().unwrap_or("").to_string(),
+                        open: fields[1].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        high: fields[2].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        low: fields[3].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        close: fields[4].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                        volume: fields[5].as_str().unwrap_or("0").parse().unwrap_or(0),
+                        open_interest: fields[6].as_str().unwrap_or("0").parse().ok(),
+                        settlement: None,
+                    });
+                }
+            }
+        }
     }
     
     Ok(history)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_symbol_for_realtime_commodity() {
+        let service = FuturesService::new();
+        
+        // 测试商品期货合约代码格式化
+        assert_eq!(service.format_symbol_for_realtime("CU2405"), "nf_CU2405");
+        assert_eq!(service.format_symbol_for_realtime("AL2405"), "nf_AL2405");
+        assert_eq!(service.format_symbol_for_realtime("RB2405"), "nf_RB2405");
+        assert_eq!(service.format_symbol_for_realtime("V2309"), "nf_V2309");
+    }
+
+    #[test]
+    fn test_format_symbol_for_realtime_financial() {
+        let service = FuturesService::new();
+        
+        // 测试金融期货合约代码格式化
+        assert_eq!(service.format_symbol_for_realtime("IF2401"), "CFF_IF2401");
+        assert_eq!(service.format_symbol_for_realtime("IC2401"), "CFF_IC2401");
+        assert_eq!(service.format_symbol_for_realtime("IH2401"), "CFF_IH2401");
+        assert_eq!(service.format_symbol_for_realtime("T2406"), "CFF_T2406");
+        assert_eq!(service.format_symbol_for_realtime("TF2406"), "CFF_TF2406");
+    }
+
+    #[test]
+    fn test_format_symbol_already_formatted() {
+        let service = FuturesService::new();
+        
+        // 测试已经格式化的合约代码
+        assert_eq!(service.format_symbol_for_realtime("nf_CU2405"), "nf_CU2405");
+        assert_eq!(service.format_symbol_for_realtime("NF_CU2405"), "nf_CU2405");
+        assert_eq!(service.format_symbol_for_realtime("CFF_IF2401"), "CFF_IF2401");
+    }
+
+    #[test]
+    fn test_is_cffex_symbol() {
+        let service = FuturesService::new();
+        
+        // 测试金融期货品种判断
+        assert!(service.is_cffex_symbol("IF2401"));
+        assert!(service.is_cffex_symbol("IC2401"));
+        assert!(service.is_cffex_symbol("IH2401"));
+        assert!(service.is_cffex_symbol("T2406"));
+        assert!(service.is_cffex_symbol("TF2406"));
+        assert!(service.is_cffex_symbol("TS2406"));
+        
+        // 测试商品期货品种判断
+        assert!(!service.is_cffex_symbol("CU2405"));
+        assert!(!service.is_cffex_symbol("AL2405"));
+        assert!(!service.is_cffex_symbol("RB2405"));
+    }
+
+    #[test]
+    fn test_get_exchange_node() {
+        let service = FuturesService::new();
+        
+        assert_eq!(service.get_exchange_node("DCE"), "dce_qh");
+        assert_eq!(service.get_exchange_node("CZCE"), "czce_qh");
+        assert_eq!(service.get_exchange_node("SHFE"), "shfe_qh");
+        assert_eq!(service.get_exchange_node("CFFEX"), "cffex_qh");
+        assert_eq!(service.get_exchange_node("INE"), "ine_qh");
+        assert_eq!(service.get_exchange_node("dce"), "dce_qh"); // 测试小写
+        assert_eq!(service.get_exchange_node("unknown"), "dce_qh"); // 测试未知交易所
+    }
+
+    #[test]
+    fn test_generate_random_code() {
+        let service = FuturesService::new();
+        
+        let code1 = service.generate_random_code();
+        let code2 = service.generate_random_code();
+        
+        // 验证生成的是十六进制字符串
+        assert!(code1.chars().all(|c| c.is_ascii_hexdigit()));
+        assert!(code2.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_get_exchanges() {
+        let service = FuturesService::new();
+        let exchanges = service.get_exchanges();
+        
+        assert_eq!(exchanges.len(), 5);
+        
+        let codes: Vec<&str> = exchanges.iter().map(|e| e.code.as_str()).collect();
+        assert!(codes.contains(&"DCE"));
+        assert!(codes.contains(&"CZCE"));
+        assert!(codes.contains(&"SHFE"));
+        assert!(codes.contains(&"INE"));
+        assert!(codes.contains(&"CFFEX"));
+    }
+
+    #[test]
+    fn test_parse_sina_realtime_data_valid() {
+        let service = FuturesService::new();
+        
+        // 模拟新浪API返回的数据格式
+        let mock_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000,75500,74800,74900,75100,75200,75150,75100,74950,100,200,50000,100000,0,0,0,0,0,0,0,0,0,0,0,0,0";"#;
+        
+        let result = service.parse_sina_realtime_data(mock_data, "CU2405");
+        assert!(result.is_ok());
+        
+        let info = result.unwrap();
+        assert_eq!(info.symbol, "CU2405");
+        assert_eq!(info.name, "铜2405");
+        assert_eq!(info.open, 75000.0);
+        assert_eq!(info.high, 75500.0);
+        assert_eq!(info.low, 74800.0);
+        assert_eq!(info.current_price, 75150.0);
+        assert_eq!(info.prev_settlement, Some(74950.0));
+        assert_eq!(info.volume, 100000);
+        assert_eq!(info.open_interest, Some(50000));
+    }
+
+    #[test]
+    fn test_parse_sina_realtime_data_empty() {
+        let service = FuturesService::new();
+        
+        // 测试空数据
+        let empty_data = r#"var hq_str_nf_CU2405="";"#;
+        let result = service.parse_sina_realtime_data(empty_data, "CU2405");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_sina_realtime_data_insufficient_fields() {
+        let service = FuturesService::new();
+        
+        // 测试字段不足的数据
+        let insufficient_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000";"#;
+        let result = service.parse_sina_realtime_data(insufficient_data, "CU2405");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_multiple_realtime_data() {
+        let service = FuturesService::new();
+        
+        // 模拟多个合约的数据
+        let mock_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000,75500,74800,74900,75100,75200,75150,75100,74950,100,200,50000,100000,0,0,0,0,0,0,0,0,0,0,0,0,0";var hq_str_nf_AL2405="铝2405,09:00:00,19000,19200,18900,18950,19050,19100,19080,19050,18980,50,100,30000,80000,0,0,0,0,0,0,0,0,0,0,0,0,0";"#;
+        
+        let symbols = vec!["CU2405".to_string(), "AL2405".to_string()];
+        let result = service.parse_multiple_realtime_data(mock_data, &symbols);
+        assert!(result.is_ok());
+        
+        let infos = result.unwrap();
+        assert_eq!(infos.len(), 2);
+        assert_eq!(infos[0].symbol, "CU2405");
+        assert_eq!(infos[1].symbol, "AL2405");
+    }
+
+    #[test]
+    fn test_parse_sina_list_data() {
+        let service = FuturesService::new();
+        
+        // 模拟新浪期货列表API返回的JSON数据
+        let mock_json = serde_json::json!({
+            "symbol": "CU2405",
+            "name": "铜2405",
+            "trade": "75150",
+            "presettlement": "74950",
+            "open": "75000",
+            "high": "75500",
+            "low": "74800",
+            "volume": "100000",
+            "position": "50000",
+            "settlement": "75100"
+        });
+        
+        let result = service.parse_sina_list_data(&mock_json);
+        assert!(result.is_ok());
+        
+        let info = result.unwrap();
+        assert_eq!(info.symbol, "CU2405");
+        assert_eq!(info.name, "铜2405");
+        assert_eq!(info.current_price, 75150.0);
+        assert_eq!(info.prev_settlement, Some(74950.0));
+        assert_eq!(info.open, 75000.0);
+        assert_eq!(info.high, 75500.0);
+        assert_eq!(info.low, 74800.0);
+        assert_eq!(info.volume, 100000);
+        assert_eq!(info.open_interest, Some(50000));
+        assert_eq!(info.settlement, Some(75100.0));
+    }
+
+    #[test]
+    fn test_parse_sina_history_data() {
+        // 模拟新浪历史数据API返回格式
+        let mock_data = r#"var _temp=([["2024-01-02","75000","75500","74800","75100","100000","50000","75050"],["2024-01-03","75100","75600","74900","75200","110000","51000","75150"]]);"#;
+        
+        let result = parse_sina_history_data(mock_data, "CU2405", 10);
+        assert!(result.is_ok());
+        
+        let history = result.unwrap();
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].date, "2024-01-02");
+        assert_eq!(history[0].open, 75000.0);
+        assert_eq!(history[0].high, 75500.0);
+        assert_eq!(history[0].low, 74800.0);
+        assert_eq!(history[0].close, 75100.0);
+        assert_eq!(history[0].volume, 100000);
+    }
+
+    #[test]
+    fn test_parse_sina_minute_data() {
+        // 模拟新浪分钟数据API返回格式
+        let mock_data = r#"=([["2024-01-02 09:00","75000","75100","74950","75050","10000","50000"],["2024-01-02 09:01","75050","75150","75000","75100","8000","50100"]]);"#;
+        
+        let result = parse_sina_minute_data(mock_data, "CU2405");
+        assert!(result.is_ok());
+        
+        let history = result.unwrap();
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].date, "2024-01-02 09:00");
+        assert_eq!(history[0].open, 75000.0);
+    }
+
+    #[test]
+    fn test_get_beijing_time() {
+        let beijing_time = get_beijing_time();
+        // 验证返回的是有效的时间
+        assert!(beijing_time.timestamp() > 0);
+    }
 }
