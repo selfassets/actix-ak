@@ -86,22 +86,49 @@ impl FuturesService {
     }
 
     // 获取期货列表（通过新浪API获取品种数据）
+    // 遍历交易所下的多个品种，获取每个品种的合约列表
     pub async fn list_main_futures(&self, query: &FuturesQuery) -> Result<Vec<FuturesInfo>> {
         match query.exchange.as_deref() {
             Some(exchange) => {
-                let node = self.get_exchange_node(exchange);
-                self.get_futures_by_node(&node, query.limit).await
+                // 获取该交易所的所有品种node
+                let nodes = self.get_exchange_nodes(exchange);
+                let mut all_futures = Vec::new();
+                let limit_per_node = query.limit.map(|l| (l / nodes.len().max(1)).max(1));
+                
+                for node in nodes {
+                    match self.get_futures_by_node(node, limit_per_node).await {
+                        Ok(mut futures) => all_futures.append(&mut futures),
+                        Err(e) => log::warn!("获取品种 {} 数据失败: {}", node, e),
+                    }
+                    // 如果已经获取足够数据，提前退出
+                    if let Some(limit) = query.limit {
+                        if all_futures.len() >= limit {
+                            break;
+                        }
+                    }
+                }
+                
+                // 按持仓量排序
+                all_futures.sort_by(|a, b| b.open_interest.cmp(&a.open_interest));
+                
+                if let Some(limit) = query.limit {
+                    all_futures.truncate(limit);
+                }
+                Ok(all_futures)
             }
             None => {
                 // 获取所有交易所的主力合约
                 let mut all_futures = Vec::new();
-                let exchanges = vec!["DCE", "CZCE", "SHFE", "CFFEX"];
+                let exchanges = vec!["SHFE", "DCE", "CZCE", "CFFEX"];
                 
                 for exchange in exchanges {
-                    let node = self.get_exchange_node(exchange);
-                    match self.get_futures_by_node(&node, Some(5)).await {
-                        Ok(mut futures) => all_futures.append(&mut futures),
-                        Err(e) => log::warn!("Failed to get futures for {}: {}", exchange, e),
+                    let nodes = self.get_exchange_nodes(exchange);
+                    // 每个交易所取前2个品种
+                    for node in nodes.iter().take(2) {
+                        match self.get_futures_by_node(node, Some(1)).await {
+                            Ok(mut futures) => all_futures.append(&mut futures),
+                            Err(e) => log::warn!("获取品种 {} 数据失败: {}", node, e),
+                        }
                     }
                 }
                 
@@ -114,6 +141,10 @@ impl FuturesService {
 
     // 通过新浪API获取指定品种的期货数据
     async fn get_futures_by_node(&self, node: &str, limit: Option<usize>) -> Result<Vec<FuturesInfo>> {
+        let full_url = format!("{}?page=1&sort=position&asc=0&node={}&base=futures", 
+            SINA_FUTURES_LIST_API, node);
+        println!("📡 请求期货列表 URL: {}", full_url);
+        
         let response = self.client
             .get(SINA_FUTURES_LIST_API)
             .query(&[
@@ -130,7 +161,11 @@ impl FuturesService {
             return Err(anyhow!("Failed to fetch futures list: {}", response.status()));
         }
 
-        let json_data: serde_json::Value = response.json().await?;
+        let text = response.text().await?;
+        println!("📥 原始响应数据: {}", &text[..std::cmp::min(500, text.len())]);
+        
+        let json_data: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
         let mut futures_list = Vec::new();
 
         if let Some(data_array) = json_data.as_array() {
@@ -208,16 +243,80 @@ impl FuturesService {
         }
     }
 
-    // 获取交易所对应的node参数
-    fn get_exchange_node(&self, exchange: &str) -> String {
+    // 获取交易所对应的品种node列表
+    // 新浪API的node参数是具体品种，不是交易所代码
+    fn get_exchange_nodes(&self, exchange: &str) -> Vec<&'static str> {
         match exchange.to_uppercase().as_str() {
-            "DCE" => "dce_qh".to_string(),
-            "CZCE" => "czce_qh".to_string(), 
-            "SHFE" => "shfe_qh".to_string(),
-            "CFFEX" => "cffex_qh".to_string(),
-            "INE" => "ine_qh".to_string(),
-            _ => "dce_qh".to_string(), // 默认大商所
+            // 大连商品交易所品种
+            "DCE" => vec![
+                "pvc_qh",   // PVC
+                "zly_qh",   // 棕榈油
+                "de_qh",    // 豆二
+                "dp_qh",    // 豆粕
+                "jd_qh",    // 鸡蛋
+                "lldpe_qh", // 塑料
+                "jbx_qh",   // PP
+                "dy_qh",    // 豆油
+                "jt_qh",    // 焦炭
+                "jm_qh",    // 焦煤
+                "gm_qh",    // 硅锰
+                "pg_qh",    // 液化石油气
+                "lh_qh",    // 生猪
+            ],
+            // 郑州商品交易所品种
+            "CZCE" => vec![
+                "pta_qh",   // PTA
+                "czy_qh",   // 菜籽油
+                "qm_qh",    // 强麦
+                "mh_qh",    // 棉花
+                "zc_qh",    // 郑煤
+                "bl_qh",    // 玻璃
+                "ms_qh",    // 棉纱
+                "xpg_qh",   // 鲜苹果
+                "cj_qh",    // 红枣
+                "pk_qh",    // 花生
+            ],
+            // 上海期货交易所品种
+            "SHFE" => vec![
+                "ry_qh",    // 燃油
+                "lv_qh",    // 铝
+                "xj_qh",    // 橡胶
+                "tong_qh",  // 铜
+                "hj_qh",    // 黄金
+                "lwg_qh",   // 螺纹钢
+                "xc_qh",    // 线材
+                "qian_qh",  // 铅
+                "by_qh",    // 白银
+                "ni_qh",    // 镍
+                "xi_qh",    // 锡
+                "zj_qh",    // 纸浆
+            ],
+            // 中国金融期货交易所品种
+            "CFFEX" => vec![
+                "qz_qh",    // 沪深300指数期货
+                "gz_qh",    // 5年期国债期货
+                "sngz_qh",  // 10年期国债期货
+                "szgz_qh",  // 上证50指数期货
+                "zzgz_qh",  // 中证500指数期货
+                "im_qh",    // 中证1000指数期货
+            ],
+            // 上海国际能源交易中心
+            "INE" => vec![
+                "yy_qh",    // 原油
+            ],
+            // 广州期货交易所
+            "GFEX" => vec![
+                "si_qh",    // 工业硅
+                "lc_qh",    // 碳酸锂
+            ],
+            _ => vec!["tong_qh"], // 默认铜
         }
+    }
+
+    // 获取交易所对应的node参数（保留兼容性，返回第一个品种）
+    #[allow(dead_code)]
+    fn get_exchange_node(&self, exchange: &str) -> String {
+        self.get_exchange_nodes(exchange).first().unwrap_or(&"tong_qh").to_string()
     }
 
     // 判断是否为中金所合约
@@ -665,29 +764,39 @@ mod tests {
         println!("✅ 中金所合约判断测试通过！");
     }
 
-    /// 测试交易所节点映射
-    /// 将交易所代码映射为新浪API的node参数
+    /// 测试交易所品种节点映射
+    /// 将交易所代码映射为新浪API的品种node列表
     #[test]
-    fn test_get_exchange_node() {
-        println!("\n========== 测试交易所节点映射 ==========");
+    fn test_get_exchange_nodes() {
+        println!("\n========== 测试交易所品种节点映射 ==========");
         let service = FuturesService::new();
         
-        let test_cases = vec![
-            ("DCE", "dce_qh", "大商所"),
-            ("CZCE", "czce_qh", "郑商所"),
-            ("SHFE", "shfe_qh", "上期所"),
-            ("CFFEX", "cffex_qh", "中金所"),
-            ("INE", "ine_qh", "能源中心"),
-            ("dce", "dce_qh", "小写测试"),
-            ("unknown", "dce_qh", "未知交易所默认"),
-        ];
+        // 测试各交易所返回的品种列表
+        let dce_nodes = service.get_exchange_nodes("DCE");
+        println!("大商所品种数量: {}", dce_nodes.len());
+        println!("  品种列表: {:?}", &dce_nodes[..std::cmp::min(5, dce_nodes.len())]);
+        assert!(dce_nodes.contains(&"pvc_qh"));
+        assert!(dce_nodes.contains(&"jt_qh"));
         
-        for (input, expected, desc) in &test_cases {
-            let result = service.get_exchange_node(input);
-            println!("{}: {} -> {} (期望: {})", desc, input, result, expected);
-            assert_eq!(result, *expected);
-        }
-        println!("✅ 交易所节点映射测试通过！");
+        let czce_nodes = service.get_exchange_nodes("CZCE");
+        println!("郑商所品种数量: {}", czce_nodes.len());
+        assert!(czce_nodes.contains(&"pta_qh"));
+        
+        let shfe_nodes = service.get_exchange_nodes("SHFE");
+        println!("上期所品种数量: {}", shfe_nodes.len());
+        assert!(shfe_nodes.contains(&"tong_qh"));
+        assert!(shfe_nodes.contains(&"hj_qh"));
+        
+        let cffex_nodes = service.get_exchange_nodes("CFFEX");
+        println!("中金所品种数量: {}", cffex_nodes.len());
+        assert!(cffex_nodes.contains(&"qz_qh"));
+        
+        // 测试 get_exchange_node 返回第一个品种
+        let first_node = service.get_exchange_node("DCE");
+        println!("大商所第一个品种: {}", first_node);
+        assert_eq!(first_node, dce_nodes[0]);
+        
+        println!("✅ 交易所品种节点映射测试通过！");
     }
 
     /// 测试随机码生成
@@ -1053,7 +1162,7 @@ mod tests {
         }
     }
 
-    /// 测试获取期货列表（按交易所）
+    /// 测试获取期货列表（按交易所） ok
     /// 从新浪API获取指定交易所的期货品种列表
     #[tokio::test]
     async fn test_fetch_futures_list_by_exchange() {
