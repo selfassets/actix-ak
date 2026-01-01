@@ -397,6 +397,7 @@ pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<V
 
 // 获取期货分钟数据
 // period: "1", "5", "15", "30", "60" 分钟
+#[allow(dead_code)]
 pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<FuturesHistoryData>> {
     let client = Client::new();
     
