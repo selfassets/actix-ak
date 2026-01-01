@@ -190,6 +190,28 @@ pub struct FuturesCommQuery {
     pub exchange: Option<String>,  // 交易所：所有/上海期货交易所/大连商品交易所/郑州商品交易所/上海国际能源交易中心/中国金融期货交易所/广州期货交易所
 }
 
+/// 期货交易规则信息
+/// 对应 akshare 的 futures_rule() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesRule {
+    pub exchange: String,              // 交易所
+    pub product: String,               // 品种
+    pub code: String,                  // 代码
+    pub margin_rate: Option<f64>,      // 交易保证金比例(%)
+    pub price_limit: Option<f64>,      // 涨跌停板幅度(%)
+    pub contract_size: Option<f64>,    // 合约乘数
+    pub price_tick: Option<f64>,       // 最小变动价位
+    pub max_order_size: Option<u64>,   // 限价单每笔最大下单手数
+    pub special_note: Option<String>,  // 特殊合约参数调整
+    pub remark: Option<String>,        // 调整备注
+}
+
+/// 期货交易规则查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesRuleQuery {
+    pub date: Option<String>,  // 交易日期 YYYYMMDD
+}
+
 /// 期货交易费用信息
 /// 对应 akshare 的 futures_fees_info() 返回结果
 #[derive(Debug, Serialize, Deserialize, Clone)]

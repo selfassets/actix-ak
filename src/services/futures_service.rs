@@ -9,7 +9,7 @@ use crate::models::{
     FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol,
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
-    FuturesFeesInfo, FuturesCommInfo
+    FuturesFeesInfo, FuturesCommInfo, FuturesRule
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -1244,7 +1244,158 @@ pub async fn get_futures_comm_info(_exchange: Option<&str>) -> Result<Vec<Future
     ))
 }
 
+// ==================== 期货交易规则相关 ====================
+
+/// 国泰君安期货交易日历API
+const GTJA_CALENDAR_URL: &str = "https://www.gtjaqh.com/pc/calendar";
+
+/// 获取期货交易规则
+/// 对应 akshare 的 futures_rule() 函数
+/// 数据来源: https://www.gtjaqh.com/pc/calendar.html
+/// date: 交易日期，格式 YYYYMMDD，需要指定为交易日且是近期的日期
+pub async fn get_futures_rule(date: Option<&str>) -> Result<Vec<FuturesRule>> {
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)  // 忽略SSL证书验证
+        .build()?;
+    
+    // 默认使用当前日期
+    let query_date = date.unwrap_or_else(|| {
+        let now = Utc::now().with_timezone(&Shanghai);
+        Box::leak(now.format("%Y%m%d").to_string().into_boxed_str())
+    });
+    
+    let url = format!("{}?date={}", GTJA_CALENDAR_URL, query_date);
+    println!("📡 请求期货交易规则数据 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取期货交易规则数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    parse_futures_rule_html(&text)
+}
+
+/// 解析期货交易规则HTML
+fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
+    let mut rules = Vec::new();
+    
+    // 查找所有表格
+    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
+    let tables: Vec<_> = table_re.captures_iter(html).collect();
+    
+    if tables.is_empty() {
+        return Err(anyhow!("未找到交易规则数据表格"));
+    }
+    
+    // 解析表格行
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
+    
+    // 清理HTML标签
+    let clean_html = |s: &str| -> String {
+        let tag_re = Regex::new(r"<[^>]+>").unwrap();
+        tag_re.replace_all(s, "").trim().to_string()
+    };
+    
+    // 遍历所有表格
+    for table_cap in &tables {
+        let table_content = table_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        
+        // 跳过不包含交易规则数据的表格
+        if !table_content.contains("交易保证金比例") && !table_content.contains("涨跌停板幅度") {
+            continue;
+        }
+        
+        for row_cap in row_re.captures_iter(table_content) {
+            let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+            let cells: Vec<String> = cell_re.captures_iter(row_content)
+                .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+                .collect();
+            
+            // 跳过表头行（包含"交易所"或"品种"或"交易保证金比例"或colspan）
+            if cells.iter().any(|c| c.contains("交易所") || c.contains("交易保证金比例") || c == "品种" || c.contains("保证金收取标准")) {
+                continue;
+            }
+            
+            // 跳过只有一个单元格的行（通常是标题行）
+            if cells.len() <= 1 {
+                continue;
+            }
+            
+            // 数据行至少需要6列
+            // 列: 交易所(0), 品种(1), 代码(2), 交易保证金比例(3), 涨跌停板幅度(4), 合约乘数(5), 
+            //     最小变动价位(6), 限价单每笔最大下单手数(7), 特殊合约参数调整(8), 调整备注(9)
+            if cells.len() >= 6 {
+                let exchange = cells.get(0).cloned().unwrap_or_default();
+                let product = cells.get(1).cloned().unwrap_or_default();
+                let code = cells.get(2).cloned().unwrap_or_default();
+                
+                // 跳过空行
+                if exchange.is_empty() && product.is_empty() {
+                    continue;
+                }
+                
+                // 解析保证金比例（去掉%，处理"--"）
+                let margin_rate = cells.get(3)
+                    .and_then(|s| {
+                        let s = s.trim_end_matches('%').trim();
+                        if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
+                    });
+                
+                // 解析涨跌停板幅度（去掉%，处理"--"）
+                let price_limit = cells.get(4)
+                    .and_then(|s| {
+                        let s = s.trim_end_matches('%').trim();
+                        if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
+                    });
+                
+                // 解析合约乘数
+                let contract_size = cells.get(5)
+                    .and_then(|s| s.parse::<f64>().ok());
+                
+                // 解析最小变动价位
+                let price_tick = cells.get(6)
+                    .and_then(|s| s.parse::<f64>().ok());
+                
+                // 解析限价单每笔最大下单手数
+                let max_order_size = cells.get(7)
+                    .and_then(|s| s.parse::<u64>().ok());
+                
+                // 特殊合约参数调整
+                let special_note = cells.get(8).cloned().filter(|s| !s.is_empty());
+                
+                // 调整备注
+                let remark = cells.get(9).cloned().filter(|s| !s.is_empty());
+                
+                rules.push(FuturesRule {
+                    exchange,
+                    product,
+                    code,
+                    margin_rate,
+                    price_limit,
+                    contract_size,
+                    price_tick,
+                    max_order_size,
+                    special_note,
+                    remark,
+                });
+            }
+        }
+    }
+    
+    println!("📊 解析到 {} 条期货交易规则数据", rules.len());
+    Ok(rules)
+}
+
 /// 解析期货手续费HTML
+#[allow(dead_code)]
 fn parse_comm_info_html(html: &str, exchange_filter: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
     let mut all_data = Vec::new();
     
@@ -2417,6 +2568,49 @@ mod tests {
             }
             Err(e) => {
                 println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取期货交易规则
+    #[tokio::test]
+    async fn test_futures_rule() {
+        println!("\n========== 测试获取期货交易规则 ==========");
+        
+        // 测试获取交易规则（使用指定日期，因为默认日期可能是非交易日）
+        println!("\n  1. 测试获取交易规则（指定日期 20250328）:");
+        match get_futures_rule(Some("20250328")).await {
+            Ok(rules) => {
+                println!("  ✅ 获取成功！共 {} 条规则数据", rules.len());
+                println!("\n  前20条数据:");
+                println!("  {:<12} {:<10} {:<8} {:>10} {:>10} {:>10} {:>10} {:>10}", 
+                    "交易所", "品种", "代码", "保证金%", "涨跌停%", "合约乘数", "最小变动", "最大手数");
+                for r in rules.iter().take(20) {
+                    let margin = r.margin_rate.map(|v| format!("{:.1}", v)).unwrap_or("--".to_string());
+                    let limit = r.price_limit.map(|v| format!("{:.1}", v)).unwrap_or("--".to_string());
+                    let size = r.contract_size.map(|v| format!("{:.0}", v)).unwrap_or("--".to_string());
+                    let tick = r.price_tick.map(|v| format!("{:.2}", v)).unwrap_or("--".to_string());
+                    let max_order = r.max_order_size.map(|v| format!("{}", v)).unwrap_or("--".to_string());
+                    println!("  {:<12} {:<10} {:<8} {:>10} {:>10} {:>10} {:>10} {:>10}", 
+                        r.exchange, r.product, r.code, margin, limit, size, tick, max_order);
+                }
+                
+                // 验证数据
+                assert!(rules.len() > 50, "应该有超过50条规则数据");
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试默认日期（可能是非交易日，允许失败）
+        println!("\n  2. 测试获取交易规则（默认日期）:");
+        match get_futures_rule(None).await {
+            Ok(rules) => {
+                println!("  ✅ 获取成功！共 {} 条规则数据", rules.len());
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
             }
         }
     }
