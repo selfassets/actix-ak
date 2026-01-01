@@ -404,3 +404,21 @@ pub struct RankTableResponse {
     pub symbol: String,                      // 合约代码
     pub data: Vec<PositionRankData>,         // 排名数据列表
 }
+
+
+/// 郑商所仓单日报数据
+/// 对应 akshare 的 futures_warehouse_receipt_czce() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CzceWarehouseReceipt {
+    pub warehouse: String,                   // 仓库简称
+    pub warehouse_receipt: Option<i64>,      // 仓单数量
+    pub valid_forecast: Option<i64>,         // 有效预报
+    pub change: Option<i64>,                 // 增减
+}
+
+/// 郑商所仓单日报响应（按品种分组）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CzceWarehouseReceiptResponse {
+    pub symbol: String,                      // 品种代码
+    pub data: Vec<CzceWarehouseReceipt>,     // 仓单数据列表
+}

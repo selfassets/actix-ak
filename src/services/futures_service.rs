@@ -11,7 +11,8 @@ use crate::models::{
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
     FuturesFeesInfo, FuturesCommInfo, FuturesRule,
     Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious,
-    PositionRankData, RankTableResponse, RankSum
+    PositionRankData, RankTableResponse, RankSum,
+    CzceWarehouseReceipt, CzceWarehouseReceiptResponse
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -3653,6 +3654,185 @@ fn parse_dce_html_table(html: &str, contract: &str, variety: &str) -> Result<Vec
     }
     
     Ok(result)
+}
+
+
+// ==================== 仓单日报相关 ====================
+
+/// 郑州商品交易所-交易数据-仓单日报
+/// 对应 akshare 的 futures_warehouse_receipt_czce() 函数
+/// 数据来源: http://www.czce.com.cn/cn/jysj/cdrb/H770310index_1.htm
+/// 
+/// date: 交易日期，格式 YYYYMMDD
+pub async fn futures_warehouse_receipt_czce(date: &str) -> Result<Vec<CzceWarehouseReceiptResponse>> {
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)  // 忽略SSL证书验证
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+    
+    // 根据日期选择文件格式（20251101之后使用xlsx格式）
+    let date_num: i32 = date.parse().unwrap_or(0);
+    let url = if date_num > 20251101 {
+        format!(
+            "http://www.czce.com.cn/cn/DFSStaticFiles/Future/{}/{}/FutureDataWhsheet.xlsx",
+            &date[0..4], date
+        )
+    } else {
+        format!(
+            "http://www.czce.com.cn/cn/DFSStaticFiles/Future/{}/{}/FutureDataWhsheet.xls",
+            &date[0..4], date
+        )
+    };
+    
+    println!("📡 请求郑商所仓单日报数据 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取郑商所仓单日报数据失败: {}，可能是非交易日", response.status()));
+    }
+
+    let bytes = response.bytes().await?;
+    
+    // 使用calamine解析Excel文件
+    use std::io::Cursor;
+    use calamine::{Reader, Xlsx, Xls, open_workbook_auto_from_rs};
+    
+    let cursor = Cursor::new(bytes.as_ref());
+    let mut workbook = open_workbook_auto_from_rs(cursor)
+        .map_err(|e| anyhow!("打开Excel文件失败: {}", e))?;
+    
+    // 获取第一个工作表
+    let sheet_names = workbook.sheet_names().to_vec();
+    if sheet_names.is_empty() {
+        return Err(anyhow!("Excel文件没有工作表"));
+    }
+    
+    let range = workbook.worksheet_range(&sheet_names[0])
+        .map_err(|e| anyhow!("读取工作表失败: {}", e))?;
+    
+    // 将数据转换为二维数组
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    for row in range.rows() {
+        let row_data: Vec<String> = row.iter()
+            .map(|cell| {
+                match cell {
+                    calamine::Data::String(s) => s.clone(),
+                    calamine::Data::Float(f) => format!("{}", f),
+                    calamine::Data::Int(i) => format!("{}", i),
+                    calamine::Data::Bool(b) => format!("{}", b),
+                    calamine::Data::DateTime(dt) => format!("{}", dt),
+                    calamine::Data::Error(e) => format!("{:?}", e),
+                    calamine::Data::Empty => String::new(),
+                    _ => String::new(),
+                }
+            })
+            .collect();
+        rows.push(row_data);
+    }
+    
+    // 找到所有"品种"开头的行索引（每个品种的起始位置）
+    let mut index_list: Vec<usize> = Vec::new();
+    for (i, row) in rows.iter().enumerate() {
+        if !row.is_empty() && row[0].starts_with("品种") {
+            index_list.push(i);
+        }
+    }
+    index_list.push(rows.len());
+    
+    let mut result: Vec<CzceWarehouseReceiptResponse> = Vec::new();
+    
+    // 解析每个品种的数据
+    for i in 0..index_list.len() - 1 {
+        let start_idx = index_list[i];
+        let end_idx = index_list[i + 1];
+        
+        if start_idx >= rows.len() {
+            continue;
+        }
+        
+        // 提取品种代码（从"品种：XX"中提取字母部分）
+        let first_cell = &rows[start_idx][0];
+        let symbol = extract_letters(first_cell);
+        
+        if symbol.is_empty() {
+            continue;
+        }
+        
+        // 找到表头行（通常是品种行的下一行或下两行）
+        let mut header_idx = start_idx + 1;
+        while header_idx < end_idx {
+            if !rows[header_idx].is_empty() && 
+               (rows[header_idx][0].contains("仓库") || rows[header_idx][0].contains("简称")) {
+                break;
+            }
+            header_idx += 1;
+        }
+        
+        if header_idx >= end_idx {
+            continue;
+        }
+        
+        // 解析数据行
+        let mut data: Vec<CzceWarehouseReceipt> = Vec::new();
+        for row_idx in (header_idx + 1)..end_idx {
+            let row = &rows[row_idx];
+            
+            // 跳过空行和合计行
+            if row.is_empty() || row[0].is_empty() || row[0].contains("合计") || row[0].contains("小计") {
+                continue;
+            }
+            
+            // 解析仓库名称和数据
+            let warehouse = row.get(0).cloned().unwrap_or_default().trim().to_string();
+            if warehouse.is_empty() {
+                continue;
+            }
+            
+            // 解析数值字段（仓单数量、有效预报、增减）
+            let parse_num = |s: &str| -> Option<i64> {
+                let cleaned = s.trim().replace(",", "").replace("-", "");
+                if cleaned.is_empty() {
+                    None
+                } else {
+                    cleaned.parse().ok()
+                }
+            };
+            
+            let warehouse_receipt = row.get(1).map(|s| parse_num(s)).flatten();
+            let valid_forecast = row.get(2).map(|s| parse_num(s)).flatten();
+            let change = row.get(3).map(|s| parse_num(s)).flatten();
+            
+            data.push(CzceWarehouseReceipt {
+                warehouse,
+                warehouse_receipt,
+                valid_forecast,
+                change,
+            });
+        }
+        
+        if !data.is_empty() {
+            result.push(CzceWarehouseReceiptResponse {
+                symbol,
+                data,
+            });
+        }
+    }
+    
+    // 按品种代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个品种的仓单日报数据", result.len());
+    Ok(result)
+}
+
+/// 从字符串中提取字母部分
+fn extract_letters(s: &str) -> String {
+    s.chars().filter(|c| c.is_ascii_alphabetic()).collect::<String>().to_uppercase()
 }
 
 
