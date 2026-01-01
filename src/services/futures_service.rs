@@ -372,7 +372,8 @@ impl FuturesService {
         }
 
         let text = response.text().await?;
-        println!("📥 原始响应数据: {}", &text[..std::cmp::min(300, text.len())]);
+        let preview: String = text.chars().take(300).collect();
+        println!("📥 原始响应数据: {}", preview);
         
         let json_data: serde_json::Value = serde_json::from_str(&text)
             .map_err(|e| anyhow!("解析JSON失败: {}", e))?;
@@ -702,7 +703,8 @@ pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<V
     }
 
     let text = response.text().await?;
-    println!("📥 原始响应数据: {}", &text[..std::cmp::min(300, text.len())]);
+    let preview: String = text.chars().take(300).collect();
+    println!("📥 原始响应数据: {}", preview);
     parse_sina_history_data(&text, symbol, limit)
 }
 
@@ -729,7 +731,8 @@ pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<F
     }
 
     let text = response.text().await?;
-    println!("📥 原始响应数据: {}", &text[..std::cmp::min(300, text.len())]);
+    let preview: String = text.chars().take(300).collect();
+    println!("📥 原始响应数据: {}", preview);
     parse_sina_minute_data(&text, symbol)
 }
 
@@ -901,7 +904,12 @@ pub fn get_foreign_futures_symbols() -> Vec<ForeignFuturesSymbol> {
 /// 获取外盘期货实时行情
 /// 对应 akshare 的 futures_foreign_commodity_realtime() 函数
 pub async fn get_foreign_futures_realtime(codes: &[String]) -> Result<Vec<FuturesInfo>> {
-    let client = Client::new();
+    use std::time::Duration;
+    
+    let client = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(10))
+        .build()?;
     
     let symbols_str = codes.iter()
         .map(|c| format!("hf_{}", c))
@@ -914,7 +922,7 @@ pub async fn get_foreign_futures_realtime(codes: &[String]) -> Result<Vec<Future
     let response = client
         .get(&url)
         .header("Accept", "*/*")
-        .header("Accept-Encoding", "gzip, deflate, br")
+        .header("Accept-Encoding", "gzip, deflate")
         .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
         .header("Cache-Control", "no-cache")
         .header("Host", "hq.sinajs.cn")
@@ -929,7 +937,8 @@ pub async fn get_foreign_futures_realtime(codes: &[String]) -> Result<Vec<Future
     }
 
     let text = response.text().await?;
-    println!("📥 原始响应数据: {}", &text[..std::cmp::min(500, text.len())]);
+    let preview: String = text.chars().take(500).collect();
+    println!("📥 原始响应数据: {}", preview);
     
     parse_foreign_futures_data(&text, codes)
 }
