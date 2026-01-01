@@ -422,3 +422,17 @@ pub struct CzceWarehouseReceiptResponse {
     pub symbol: String,                      // 品种代码
     pub data: Vec<CzceWarehouseReceipt>,     // 仓单数据列表
 }
+
+
+/// 大商所仓单日报数据
+/// 对应 akshare 的 futures_warehouse_receipt_dce() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DceWarehouseReceipt {
+    pub variety_code: String,                // 品种代码
+    pub variety_name: String,                // 品种名称
+    pub warehouse: String,                   // 仓库/分库
+    pub delivery_location: Option<String>,   // 可选提货地点/分库-数量
+    pub last_receipt: i64,                   // 昨日仓单量（手）
+    pub today_receipt: i64,                  // 今日仓单量（手）
+    pub change: i64,                         // 增减（手）
+}

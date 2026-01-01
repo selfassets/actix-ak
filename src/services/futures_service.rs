@@ -12,7 +12,8 @@ use crate::models::{
     FuturesFeesInfo, FuturesCommInfo, FuturesRule,
     Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious,
     PositionRankData, RankTableResponse, RankSum,
-    CzceWarehouseReceipt, CzceWarehouseReceiptResponse
+    CzceWarehouseReceipt, CzceWarehouseReceiptResponse,
+    DceWarehouseReceipt
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -3700,7 +3701,7 @@ pub async fn futures_warehouse_receipt_czce(date: &str) -> Result<Vec<CzceWareho
     
     // 使用calamine解析Excel文件
     use std::io::Cursor;
-    use calamine::{Reader, Xlsx, Xls, open_workbook_auto_from_rs};
+    use calamine::{Reader, open_workbook_auto_from_rs};
     
     let cursor = Cursor::new(bytes.as_ref());
     let mut workbook = open_workbook_auto_from_rs(cursor)
@@ -3833,6 +3834,81 @@ pub async fn futures_warehouse_receipt_czce(date: &str) -> Result<Vec<CzceWareho
 /// 从字符串中提取字母部分
 fn extract_letters(s: &str) -> String {
     s.chars().filter(|c| c.is_ascii_alphabetic()).collect::<String>().to_uppercase()
+}
+
+
+/// 大连商品交易所-行情数据-统计数据-日统计-仓单日报
+/// 对应 akshare 的 futures_warehouse_receipt_dce() 函数
+/// 数据来源: http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/cdrb/index.html
+/// 
+/// date: 交易日期，格式 YYYYMMDD
+pub async fn futures_warehouse_receipt_dce(date: &str) -> Result<Vec<DceWarehouseReceipt>> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+    
+    let url = "http://www.dce.com.cn/dcereport/publicweb/dailystat/wbillWeeklyQuotes";
+    
+    let payload = serde_json::json!({
+        "tradeDate": date,
+        "varietyId": "all"
+    });
+    
+    println!("📡 请求大商所仓单日报数据 URL: {}", url);
+    
+    let response = client
+        .post(url)
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "application/json, text/plain, */*")
+        .header("Content-Type", "application/json")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取大商所仓单日报数据失败: {}，可能是非交易日", response.status()));
+    }
+
+    let json_data: serde_json::Value = response.json().await?;
+    
+    // 解析数据
+    let entity_list = json_data["data"]["entityList"].as_array()
+        .ok_or_else(|| anyhow!("未找到entityList数据"))?;
+    
+    let mut result: Vec<DceWarehouseReceipt> = Vec::new();
+    
+    for item in entity_list {
+        let variety_code = item["varietyOrder"].as_str().unwrap_or("").to_uppercase();
+        let variety_name = item["variety"].as_str().unwrap_or("").to_string();
+        let warehouse = item["whAbbr"].as_str().unwrap_or("").to_string();
+        let delivery_location = item["deliveryAbbr"].as_str()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+        
+        // 解析数值字段
+        let last_receipt = item["lastWbillQty"].as_i64()
+            .or_else(|| item["lastWbillQty"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        let today_receipt = item["wbillQty"].as_i64()
+            .or_else(|| item["wbillQty"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        let change = item["diff"].as_i64()
+            .or_else(|| item["diff"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        
+        result.push(DceWarehouseReceipt {
+            variety_code,
+            variety_name,
+            warehouse,
+            delivery_location,
+            last_receipt,
+            today_receipt,
+            change,
+        });
+    }
+    
+    println!("📊 解析到 {} 条仓单日报数据", result.len());
+    Ok(result)
 }
 
 
@@ -5616,6 +5692,86 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取郑商所仓单日报数据
+    #[tokio::test]
+    async fn test_futures_warehouse_receipt_czce() {
+        println!("\n========== 测试获取郑商所仓单日报数据 ==========");
+        
+        // 测试获取仓单日报（使用较新日期）
+        println!("\n  1. 测试获取仓单日报（20251014）:");
+        match futures_warehouse_receipt_czce("20251014").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                for item in data.iter().take(5) {
+                    println!("\n    品种: {}", item.symbol);
+                    for row in item.data.iter().take(3) {
+                        println!("      {} - 仓单:{:?} 有效预报:{:?} 增减:{:?}", 
+                            row.warehouse, row.warehouse_receipt, 
+                            row.valid_forecast, row.change);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取较早日期
+        println!("\n  2. 测试获取较早日期（20240701）:");
+        match futures_warehouse_receipt_czce("20240701").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                // 只显示品种列表
+                let symbols: Vec<&str> = data.iter().map(|d| d.symbol.as_str()).collect();
+                println!("    品种列表: {:?}", symbols);
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取大商所仓单日报数据
+    #[tokio::test]
+    async fn test_futures_warehouse_receipt_dce() {
+        println!("\n========== 测试获取大商所仓单日报数据 ==========");
+        
+        // 测试获取仓单日报
+        println!("\n  1. 测试获取仓单日报（20251226）:");
+        match futures_warehouse_receipt_dce("20251226").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  {:<8} {:<10} {:<20} {:>10} {:>10} {:>8}", 
+                    "品种代码", "品种名称", "仓库/分库", "昨日仓单", "今日仓单", "增减");
+                for row in data.iter().take(15) {
+                    println!("  {:<8} {:<10} {:<20} {:>10} {:>10} {:>8}", 
+                        row.variety_code, row.variety_name, row.warehouse,
+                        row.last_receipt, row.today_receipt, row.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取较早日期
+        println!("\n  2. 测试获取较早日期（20240701）:");
+        match futures_warehouse_receipt_dce("20240701").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                // 统计品种数量
+                let mut varieties: std::collections::HashSet<&str> = std::collections::HashSet::new();
+                for row in &data {
+                    varieties.insert(&row.variety_code);
+                }
+                println!("    涉及 {} 个品种", varieties.len());
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
             }
         }
     }
