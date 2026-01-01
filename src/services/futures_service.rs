@@ -1132,7 +1132,7 @@ mod tests {
         }
     }
 
-    /// 测试获取金融期货（股指期货）实时数据
+    /// 测试获取金融期货（股指期货）实时数据 ok
     /// 金融期货使用 CFF_ 前缀
     #[tokio::test]
     async fn test_fetch_financial_futures_realtime() {
