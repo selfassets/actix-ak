@@ -1,4 +1,4 @@
-# AkShare Backend Service
+# Actix-AK
 
 一个使用 Actix-web 框架开发的类似 GitHub akshare 的后端服务，提供股票和期货数据查询API。
 

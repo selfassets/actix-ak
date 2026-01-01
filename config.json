@@ -1,0 +1,15 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "workers": 0
+  },
+  "api": {
+    "api_key": "",
+    "timeout_secs": 30,
+    "connect_timeout_secs": 10
+  },
+  "log": {
+    "level": "info"
+  }
+}

@@ -14,7 +14,7 @@ COPY Cargo.toml Cargo.lock ./
 
 # 创建虚拟 src 目录用于预编译依赖
 RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release && rm -rf src target/release/deps/akshare*
+RUN cargo build --release && rm -rf src target/release/deps/actix_ak*
 
 # 复制实际源码并构建
 COPY src ./src
@@ -32,11 +32,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 从构建阶段复制二进制文件
-COPY --from=builder /app/target/release/akshare-backend /app/akshare-backend
+COPY --from=builder /app/target/release/actix-ak /app/actix-ak
+
+# 复制默认配置文件
+COPY config.json /app/config.json
 
 # 设置环境变量
 ENV RUST_LOG=info
 
 EXPOSE 8080
 
-CMD ["./akshare-backend"]
+# 支持通过挂载覆盖配置文件: -v /path/to/config.json:/app/config.json
+CMD ["./actix-ak"]
