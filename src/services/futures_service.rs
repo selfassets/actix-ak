@@ -1234,26 +1234,14 @@ const QIHUO9_COMM_URL: &str = "https://www.9qihuo.com/qihuoshouxufei";
 /// 获取期货手续费信息
 /// 对应 akshare 的 futures_comm_info() 函数
 /// 数据来源: https://www.9qihuo.com/qihuoshouxufei
+/// 注意: 九期网数据源目前不可用，建议使用 futures_fees_info (OpenCTP) 替代
 /// exchange: 交易所名称，可选值：所有/上海期货交易所/大连商品交易所/郑州商品交易所/上海国际能源交易中心/中国金融期货交易所/广州期货交易所
-pub async fn get_futures_comm_info(exchange: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
-    let client = Client::builder()
-        .danger_accept_invalid_certs(true)  // 九期网证书可能有问题
-        .build()?;
-    
-    println!("📡 请求期货手续费数据 URL: {}", QIHUO9_COMM_URL);
-    
-    let response = client
-        .get(QIHUO9_COMM_URL)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        return Err(anyhow!("获取期货手续费数据失败: {}", response.status()));
-    }
-
-    let text = response.text().await?;
-    parse_comm_info_html(&text, exchange)
+pub async fn get_futures_comm_info(_exchange: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
+    // 九期网数据源目前不可用，直接返回错误
+    // 建议使用 get_futures_fees_info() (OpenCTP数据源) 替代
+    Err(anyhow!(
+        "九期网数据源(9qihuo.com)目前不可用，请使用 /futures/fees 接口(OpenCTP数据源)获取期货手续费信息"
+    ))
 }
 
 /// 解析期货手续费HTML
