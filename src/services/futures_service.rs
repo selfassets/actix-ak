@@ -1286,7 +1286,7 @@ pub async fn get_futures_rule(date: Option<&str>) -> Result<Vec<FuturesRule>> {
 fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
     let mut rules = Vec::new();
     
-    // 查找所有表格
+    // 查找所有表格（包括thead和tbody）
     let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
     let tables: Vec<_> = table_re.captures_iter(html).collect();
     
@@ -1294,7 +1294,7 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
         return Err(anyhow!("未找到交易规则数据表格"));
     }
     
-    // 解析表格行
+    // 解析表格行（匹配所有tr，包括thead和tbody中的）
     let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
     let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
     
@@ -1337,8 +1337,13 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
                 let product = cells.get(1).cloned().unwrap_or_default();
                 let code = cells.get(2).cloned().unwrap_or_default();
                 
-                // 跳过空行
+                // 跳过空行或表头行
                 if exchange.is_empty() && product.is_empty() {
+                    continue;
+                }
+                
+                // 跳过包含"交易所"字样的表头行
+                if exchange == "交易所" || product == "品种" {
                     continue;
                 }
                 
