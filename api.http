@@ -1,0 +1,116 @@
+### AkShare Backend API 测试
+### 参考 akshare 实现的期货数据接口
+
+@baseUrl = http://127.0.0.1:8080/api/v1
+
+### 1. 健康检查
+GET {{baseUrl}}/health
+
+### 2. 获取交易所列表
+GET {{baseUrl}}/futures/exchanges
+
+### 3. 获取品种映射表（动态从新浪JS解析）
+GET {{baseUrl}}/futures/symbols
+
+### 4. 获取指定交易所品种 - 上期所
+GET {{baseUrl}}/futures/symbols/SHFE
+
+### 5. 获取指定交易所品种 - 大商所
+GET {{baseUrl}}/futures/symbols/DCE
+
+### 6. 获取指定交易所品种 - 郑商所
+GET {{baseUrl}}/futures/symbols/CZCE
+
+### 7. 获取指定交易所品种 - 中金所
+GET {{baseUrl}}/futures/symbols/CFFEX
+
+### 8. 获取单个期货合约实时数据 - 铜
+GET {{baseUrl}}/futures/CU2602
+
+### 9. 获取单个期货合约实时数据 - 螺纹钢
+GET {{baseUrl}}/futures/RB2605
+
+### 10. 获取金融期货实时数据 - 沪深300
+GET {{baseUrl}}/futures/IF2603
+
+### 11. 批量获取期货实时数据
+POST {{baseUrl}}/futures/batch
+Content-Type: application/json
+
+["CU2602", "AL2602", "RB2605", "AU2602"]
+
+###
+
+### 12. 获取期货日K线历史数据
+GET {{baseUrl}}/futures/CU2602/history?limit=10
+
+### 13. 获取期货日K线历史数据 - 更多数据
+GET {{baseUrl}}/futures/RB2605/history?limit=30
+
+### 14. 获取期货5分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=5
+
+### 15. 获取期货15分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=15
+
+### 16. 获取期货60分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=60
+
+### 17. 获取期货列表 - 上期所
+GET {{baseUrl}}/futures?exchange=SHFE&limit=10
+
+### 18. 获取期货列表 - 大商所
+GET {{baseUrl}}/futures?exchange=DCE&limit=10
+
+### 19. 获取期货列表 - 郑商所
+GET {{baseUrl}}/futures?exchange=CZCE&limit=10
+
+### 20. 获取期货列表 - 中金所
+GET {{baseUrl}}/futures?exchange=CFFEX&limit=10
+
+### 21. 获取交易所主力合约 - 上期所
+GET {{baseUrl}}/futures/main/SHFE
+
+### 22. 获取交易所主力合约 - 大商所
+GET {{baseUrl}}/futures/main/DCE
+
+### 23. 获取品种所有合约实时数据
+GET {{baseUrl}}/futures/realtime/铜
+
+### 24. 获取合约详情
+GET {{baseUrl}}/futures/CU2602/detail
+
+### 25. 获取外盘期货品种列表
+GET {{baseUrl}}/futures/foreign/symbols
+
+### 26. 获取外盘期货实时行情 - 贵金属
+POST {{baseUrl}}/futures/foreign/realtime
+Content-Type: application/json
+
+["GC", "SI", "XAU", "XAG"]
+
+###
+
+### 27. 获取外盘期货实时行情 - 原油
+POST {{baseUrl}}/futures/foreign/realtime
+Content-Type: application/json
+
+["CL", "OIL"]
+
+###
+
+### 28. 获取外盘期货实时行情 - LME金属
+POST {{baseUrl}}/futures/foreign/realtime
+Content-Type: application/json
+
+["CAD", "AHD", "ZSD", "NID"]
+
+###
+
+### 29. 获取外盘期货实时行情 - 农产品
+POST {{baseUrl}}/futures/foreign/realtime
+Content-Type: application/json
+
+["S", "C", "W", "BO", "SM"]
+
+###
