@@ -372,10 +372,14 @@ pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<V
     let limit = query.limit.unwrap_or(30);
     
     // 新浪期货日线数据API
-    let url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20_temp=/InnerFuturesNewService.getDailyKLine";
+    let base_url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20_temp=/InnerFuturesNewService.getDailyKLine";
+    
+    // 构建完整URL并输出
+    let full_url = format!("{}?symbol={}", base_url, symbol);
+    println!("📡 请求日K线数据 URL: {}", full_url);
     
     let response = client
-        .get(url)
+        .get(base_url)
         .query(&[("symbol", symbol)])
         .header("Referer", "https://finance.sina.com.cn/")
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
@@ -387,6 +391,7 @@ pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<V
     }
 
     let text = response.text().await?;
+    println!("📥 原始响应数据: {}", &text[..std::cmp::min(500, text.len())]);
     parse_sina_history_data(&text, symbol, limit)
 }
 
@@ -421,8 +426,8 @@ pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<F
 }
 
 // 解析新浪期货日线历史数据
+// 实际返回格式: var _temp=([{"d":"2025-01-16","o":"76660.000","h":"76820.000","l":"76460.000","c":"76820.000","v":"29","p":"25","s":"76710.000"},...])
 fn parse_sina_history_data(data: &str, symbol: &str, limit: usize) -> Result<Vec<FuturesHistoryData>> {
-    // 数据格式: var _temp=([["2024-01-02","75000","75500","74800","75100","100000","50000","75050"],...]);
     let mut history = Vec::new();
     
     // 提取JSON数组部分
@@ -430,16 +435,48 @@ fn parse_sina_history_data(data: &str, symbol: &str, limit: usize) -> Result<Vec
     let end = data.rfind("])");
     
     if start.is_none() || end.is_none() {
-        return Err(anyhow!("Invalid history data format"));
+        println!("❌ 未找到有效的JSON数据边界");
+        return Err(anyhow!("Invalid history data format: cannot find JSON boundaries"));
     }
     
     let json_str = &data[start.unwrap() + 1..end.unwrap() + 1];
+    println!("📊 解析JSON数据，长度: {} 字节", json_str.len());
+    
     let json_data: serde_json::Value = serde_json::from_str(json_str)
         .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
     
     if let Some(arr) = json_data.as_array() {
-        for (i, item) in arr.iter().rev().take(limit).enumerate() {
-            if let Some(fields) = item.as_array() {
+        println!("📈 解析到 {} 条K线数据", arr.len());
+        
+        // 取最后 limit 条数据（最新的）
+        let start_idx = if arr.len() > limit { arr.len() - limit } else { 0 };
+        
+        for item in arr.iter().skip(start_idx) {
+            // 新格式：JSON对象 {"d": "日期", "o": "开盘", "h": "最高", "l": "最低", "c": "收盘", "v": "成交量", "p": "持仓", "s": "结算"}
+            if item.is_object() {
+                let date = item["d"].as_str().unwrap_or("").to_string();
+                let open = item["o"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let high = item["h"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let low = item["l"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let close = item["c"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let volume = item["v"].as_str().unwrap_or("0").parse().unwrap_or(0);
+                let open_interest = item["p"].as_str().unwrap_or("0").parse().ok();
+                let settlement = item["s"].as_str().unwrap_or("0").parse().ok();
+                
+                history.push(FuturesHistoryData {
+                    symbol: symbol.to_string(),
+                    date,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                    open_interest,
+                    settlement,
+                });
+            }
+            // 兼容旧格式：二维数组
+            else if let Some(fields) = item.as_array() {
                 if fields.len() >= 8 {
                     history.push(FuturesHistoryData {
                         symbol: symbol.to_string(),
@@ -457,8 +494,6 @@ fn parse_sina_history_data(data: &str, symbol: &str, limit: usize) -> Result<Vec
         }
     }
     
-    // 按日期正序排列
-    history.reverse();
     Ok(history)
 }
 
@@ -1054,7 +1089,7 @@ mod tests {
         }
     }
 
-    /// 测试获取期货历史K线数据
+    /// 测试获取期货历史K线数据 ok
     /// 获取指定合约的日线历史数据
     #[tokio::test]
     async fn test_fetch_futures_history() {
