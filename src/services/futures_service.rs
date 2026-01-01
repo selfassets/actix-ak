@@ -6,7 +6,8 @@ use reqwest::Client;
 use std::collections::HashMap;
 use crate::models::{
     FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange,
-    FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol
+    FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol,
+    FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -939,6 +940,363 @@ fn parse_foreign_futures_data(data: &str, codes: &[String]) -> Result<Vec<Future
 }
 
 
+// ==================== 主力连续合约相关 ====================
+
+/// 新浪主力连续合约日K线API
+const SINA_MAIN_DAILY_API: &str = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php";
+
+/// 新浪持仓排名API
+const SINA_HOLD_POS_API: &str = "https://vip.stock.finance.sina.com.cn/q/view/vFutures_Positions_cjcc.php";
+
+/// 获取主力连续合约一览表
+/// 对应 akshare 的 futures_display_main_sina() 函数
+/// 返回所有交易所的主力连续合约列表
+pub async fn get_futures_display_main_sina() -> Result<Vec<FuturesMainContract>> {
+    let mut all_contracts = Vec::new();
+    
+    for exchange in &["dce", "czce", "shfe", "cffex", "gfex"] {
+        match get_main_contracts_by_exchange(exchange).await {
+            Ok(mut contracts) => all_contracts.append(&mut contracts),
+            Err(e) => {
+                log::warn!("获取 {} 主力连续合约失败: {}", exchange, e);
+            }
+        }
+    }
+    
+    Ok(all_contracts)
+}
+
+/// 获取指定交易所的主力连续合约
+/// 对应 akshare 的 match_main_contract() 函数（返回连续合约版本）
+async fn get_main_contracts_by_exchange(exchange: &str) -> Result<Vec<FuturesMainContract>> {
+    let client = Client::new();
+    let mut contracts = Vec::new();
+    
+    // 获取交易所品种列表
+    let symbol_url = "https://vip.stock.finance.sina.com.cn/quotes_service/view/js/qihuohangqing.js";
+    let response = client
+        .get(symbol_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+    
+    let bytes = response.bytes().await?;
+    let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+    
+    // 解析交易所品种的node列表
+    let nodes = parse_exchange_nodes(&text, exchange)?;
+    
+    // 遍历每个品种，获取主力连续合约
+    for node in nodes {
+        let list_url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQFuturesData";
+        
+        let response = client
+            .get(list_url)
+            .query(&[
+                ("page", "1"),
+                ("sort", "position"),
+                ("asc", "0"),
+                ("node", &node),
+                ("base", "futures"),
+            ])
+            .send()
+            .await;
+        
+        if let Ok(resp) = response {
+            if let Ok(text) = resp.text().await {
+                if let Ok(json_data) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(arr) = json_data.as_array() {
+                        // 查找主力连续合约（名称包含"连续"且代码以0结尾）
+                        for item in arr {
+                            let name = item["name"].as_str().unwrap_or("");
+                            let symbol = item["symbol"].as_str().unwrap_or("");
+                            
+                            if name.contains("连续") && symbol.ends_with("0") {
+                                contracts.push(FuturesMainContract {
+                                    symbol: symbol.to_string(),
+                                    name: name.to_string(),
+                                    exchange: exchange.to_uppercase(),
+                                });
+                                break; // 每个品种只取一个连续合约
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(contracts)
+}
+
+/// 解析交易所的品种node列表
+fn parse_exchange_nodes(js_text: &str, exchange: &str) -> Result<Vec<String>> {
+    let mut nodes = Vec::new();
+    
+    let start = js_text.find("ARRFUTURESNODES = {");
+    let end = js_text.find("};");
+    
+    if start.is_none() || end.is_none() {
+        return Err(anyhow!("无法解析品种映射JS数据"));
+    }
+    
+    let content = &js_text[start.unwrap()..end.unwrap() + 2];
+    
+    // 查找交易所数据块
+    let pattern = format!(r"{}\s*:\s*\[", exchange);
+    let re = Regex::new(&pattern).unwrap();
+    
+    if let Some(m) = re.find(content) {
+        let start_pos = m.end();
+        let remaining = &content[start_pos..];
+        
+        // 解析品种数组 ['品种名', 'node', '数字']
+        let item_re = Regex::new(r"\['[^']+',\s*'([^']+)',\s*'[^']*'").unwrap();
+        
+        for cap in item_re.captures_iter(remaining) {
+            if let Some(node) = cap.get(1) {
+                let node_str = node.as_str();
+                if node_str.ends_with("_qh") {
+                    nodes.push(node_str.to_string());
+                }
+            }
+        }
+    }
+    
+    Ok(nodes)
+}
+
+/// 获取主力连续合约日K线数据
+/// 对应 akshare 的 futures_main_sina() 函数
+/// symbol: 主力连续合约代码，如 "V0", "RB0", "IF0"
+/// start_date/end_date: 日期范围，格式 YYYYMMDD
+pub async fn get_futures_main_sina(
+    symbol: &str,
+    start_date: Option<&str>,
+    end_date: Option<&str>,
+) -> Result<Vec<FuturesMainDailyData>> {
+    let client = Client::new();
+    
+    // 构建URL（新浪API格式）
+    let trade_date = "20210817";
+    let trade_date_fmt = format!("{}_{}_{}",
+        &trade_date[..4], &trade_date[4..6], &trade_date[6..]);
+    
+    let url = format!(
+        "{}/var%20_{}{}=/InnerFuturesNewService.getDailyKLine?symbol={}&_={}",
+        SINA_MAIN_DAILY_API, symbol, trade_date_fmt, symbol, trade_date_fmt
+    );
+    
+    println!("📡 请求主力连续日K线 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("Referer", "https://finance.sina.com.cn/")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取主力连续数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    println!("📥 原始响应数据长度: {} 字节", text.len());
+    
+    // 解析数据
+    let mut data = parse_main_daily_data(&text)?;
+    
+    // 按日期范围过滤
+    if let Some(start) = start_date {
+        data.retain(|d| d.date.replace("-", "") >= start.to_string());
+    }
+    if let Some(end) = end_date {
+        data.retain(|d| d.date.replace("-", "") <= end.to_string());
+    }
+    
+    Ok(data)
+}
+
+/// 解析主力连续日K线数据
+fn parse_main_daily_data(data: &str) -> Result<Vec<FuturesMainDailyData>> {
+    let mut history = Vec::new();
+    
+    let start = data.find("([");
+    let end = data.rfind("])");
+    
+    if start.is_none() || end.is_none() {
+        return Err(anyhow!("无效的主力连续数据格式"));
+    }
+    
+    let json_str = &data[start.unwrap() + 1..end.unwrap() + 1];
+    
+    let json_data: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| anyhow!("解析JSON失败: {}", e))?;
+    
+    if let Some(arr) = json_data.as_array() {
+        for item in arr {
+            if item.is_object() {
+                history.push(FuturesMainDailyData {
+                    date: item["d"].as_str().unwrap_or("").to_string(),
+                    open: item["o"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                    high: item["h"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                    low: item["l"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                    close: item["c"].as_str().unwrap_or("0").parse().unwrap_or(0.0),
+                    volume: item["v"].as_str().unwrap_or("0").parse().unwrap_or(0),
+                    hold: item["p"].as_str().unwrap_or("0").parse().unwrap_or(0),
+                    settle: item["s"].as_str().and_then(|s| s.parse().ok()),
+                });
+            }
+        }
+    }
+    
+    Ok(history)
+}
+
+/// 获取期货持仓排名数据
+/// 对应 akshare 的 futures_hold_pos_sina() 函数
+/// pos_type: "volume"(成交量), "long"(多单持仓), "short"(空单持仓)
+/// contract: 合约代码，如 "OI2501", "IC2403"
+/// date: 查询日期，格式 YYYYMMDD
+pub async fn get_futures_hold_pos_sina(
+    pos_type: &str,
+    contract: &str,
+    date: &str,
+) -> Result<Vec<FuturesHoldPosition>> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()?;
+    
+    // 格式化日期为 YYYY-MM-DD
+    let formatted_date = if date.len() == 8 {
+        format!("{}-{}-{}", &date[..4], &date[4..6], &date[6..])
+    } else {
+        date.to_string()
+    };
+    
+    let url = format!("{}?t_breed={}&t_date={}", SINA_HOLD_POS_API, contract, formatted_date);
+    println!("📡 请求持仓排名 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .header("Accept-Encoding", "gzip, deflate")
+        .header("Connection", "keep-alive")
+        .header("Referer", "https://vip.stock.finance.sina.com.cn/")
+        .header("Host", "vip.stock.finance.sina.com.cn")
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        // 检查是否是IP被封禁
+        if status.as_u16() == 456 || status.as_u16() == 403 {
+            return Err(anyhow!("IP被新浪封禁，请稍后重试（5-60分钟后自动解封）"));
+        }
+        return Err(anyhow!("获取持仓排名失败: {}", status));
+    }
+
+    // 使用 GBK 编码读取
+    let bytes = response.bytes().await?;
+    let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+    
+    // 检查是否返回了拒绝访问页面
+    if text.contains("拒绝访问") || text.contains("IP 存在异常访问") {
+        return Err(anyhow!("IP被新浪封禁，请稍后重试（5-60分钟后自动解封）"));
+    }
+    
+    // 根据类型选择解析的表格索引
+    let table_index = match pos_type {
+        "volume" => 2,
+        "long" => 3,
+        "short" => 4,
+        _ => return Err(anyhow!("无效的持仓类型: {}, 应为 volume/long/short", pos_type)),
+    };
+    
+    parse_hold_pos_html(&text, table_index, pos_type)
+}
+
+/// 解析持仓排名HTML数据
+fn parse_hold_pos_html(html: &str, table_index: usize, pos_type: &str) -> Result<Vec<FuturesHoldPosition>> {
+    let mut positions = Vec::new();
+    
+    // 简单的HTML表格解析
+    // 查找所有表格
+    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
+    let tables: Vec<_> = table_re.captures_iter(html).collect();
+    
+    if tables.len() <= table_index {
+        return Err(anyhow!("未找到持仓排名数据表格"));
+    }
+    
+    let table_content = tables[table_index].get(1).map(|m| m.as_str()).unwrap_or("");
+    
+    // 解析表格行
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    let cell_re = Regex::new(r"<td[^>]*>([\s\S]*?)</td>").unwrap();
+    
+    let value_col_name = match pos_type {
+        "volume" => "成交量",
+        "long" => "多单持仓",
+        "short" => "空单持仓",
+        _ => "数值",
+    };
+    
+    for (i, row_cap) in row_re.captures_iter(table_content).enumerate() {
+        // 跳过表头和合计行
+        if i == 0 {
+            continue;
+        }
+        
+        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        let cells: Vec<_> = cell_re.captures_iter(row_content)
+            .filter_map(|c| c.get(1).map(|m| m.as_str().trim()))
+            .collect();
+        
+        if cells.len() >= 3 {
+            // 清理HTML标签
+            let clean_text = |s: &str| -> String {
+                let tag_re = Regex::new(r"<[^>]+>").unwrap();
+                tag_re.replace_all(s, "").trim().to_string()
+            };
+            
+            let rank_str = clean_text(cells[0]);
+            let company = clean_text(cells[1]);
+            let value_str = clean_text(cells[2]);
+            
+            // 跳过合计行
+            if rank_str.contains("合计") || company.contains("合计") {
+                continue;
+            }
+            
+            let rank = rank_str.parse::<u32>().unwrap_or(0);
+            let value = value_str.replace(",", "").parse::<i64>().unwrap_or(0);
+            
+            // 解析增减值（如果有第4列）
+            let change = if cells.len() >= 4 {
+                clean_text(cells[3]).replace(",", "").parse::<i64>().unwrap_or(0)
+            } else {
+                0
+            };
+            
+            if rank > 0 {
+                positions.push(FuturesHoldPosition {
+                    rank,
+                    company,
+                    value,
+                    change,
+                });
+            }
+        }
+    }
+    
+    println!("📊 解析到 {} 条{}排名数据", positions.len(), value_col_name);
+    Ok(positions)
+}
+
+
 // ==================== 测试模块 ====================
 
 #[cfg(test)]
@@ -1282,5 +1640,140 @@ mod tests {
                 println!("❌ 获取失败: {}", e);
             }
         }
+    }
+
+    // ==================== 新增API测试 ====================
+
+    /// 测试获取主力连续合约一览表
+    #[tokio::test]
+    async fn test_futures_display_main_sina() {
+        println!("\n========== 测试获取主力连续合约一览表 ==========");
+        
+        match get_futures_display_main_sina().await {
+            Ok(contracts) => {
+                println!("✅ 获取成功！共 {} 个主力连续合约", contracts.len());
+                println!("\n  前20个合约:");
+                for c in contracts.iter().take(20) {
+                    println!("    【{}】{} - {}", c.exchange, c.symbol, c.name);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取主力连续日K线数据
+    #[tokio::test]
+    async fn test_futures_main_sina() {
+        println!("\n========== 测试获取主力连续日K线数据 ==========");
+        
+        // 测试获取PVC连续合约数据
+        match get_futures_main_sina("V0", None, None).await {
+            Ok(data) => {
+                println!("✅ 获取V0成功！共 {} 条数据", data.len());
+                println!("\n  最近10条:");
+                println!("  {:<12} {:>10} {:>10} {:>10} {:>10} {:>12} {:>12}", 
+                    "日期", "开盘", "最高", "最低", "收盘", "成交量", "持仓量");
+                for d in data.iter().rev().take(10) {
+                    println!("  {:<12} {:>10.2} {:>10.2} {:>10.2} {:>10.2} {:>12} {:>12}", 
+                        d.date, d.open, d.high, d.low, d.close, d.volume, d.hold);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取V0失败: {}", e);
+            }
+        }
+        
+        // 测试带日期范围
+        println!("\n  测试日期范围过滤 (20240101-20240301):");
+        match get_futures_main_sina("RB0", Some("20240101"), Some("20240301")).await {
+            Ok(data) => {
+                println!("  ✅ 获取RB0成功！范围内 {} 条数据", data.len());
+                for d in data.iter().take(5) {
+                    println!("    {} - O:{:.2} H:{:.2} L:{:.2} C:{:.2}", 
+                        d.date, d.open, d.high, d.low, d.close);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取RB0失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取期货持仓排名数据
+    #[tokio::test]
+    async fn test_futures_hold_pos_sina() {
+        println!("\n========== 测试获取期货持仓排名数据 ==========");
+        
+        // 测试成交量排名
+        println!("\n  1. 测试成交量排名:");
+        match get_futures_hold_pos_sina("volume", "RB2510", "20250107").await {
+            Ok(positions) => {
+                println!("  ✅ 获取成功！共 {} 条", positions.len());
+                println!("  {:<6} {:<20} {:>12} {:>12}", "名次", "期货公司", "成交量", "增减");
+                for p in positions.iter().take(10) {
+                    println!("  {:<6} {:<20} {:>12} {:>12}", p.rank, p.company, p.value, p.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试多单持仓排名
+        println!("\n  2. 测试多单持仓排名:");
+        match get_futures_hold_pos_sina("long", "RB2510", "20250107").await {
+            Ok(positions) => {
+                println!("  ✅ 获取成功！共 {} 条", positions.len());
+                for p in positions.iter().take(5) {
+                    println!("    {} - {} 多单:{} 增减:{}", p.rank, p.company, p.value, p.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试空单持仓排名
+        println!("\n  3. 测试空单持仓排名:");
+        match get_futures_hold_pos_sina("short", "RB2510", "20250107").await {
+            Ok(positions) => {
+                println!("  ✅ 获取成功！共 {} 条", positions.len());
+                for p in positions.iter().take(5) {
+                    println!("    {} - {} 空单:{} 增减:{}", p.rank, p.company, p.value, p.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试解析交易所品种nodes
+    #[test]
+    fn test_parse_exchange_nodes() {
+        println!("\n========== 测试解析交易所品种nodes ==========");
+        
+        // 模拟JS数据
+        let mock_js = r#"
+        ARRFUTURESNODES = {
+            czce: ['郑州商品交易所', ['PTA', 'pta_qh', '16'], ['白糖', 'sr_qh', '17']],
+            dce: ['大连商品交易所', ['豆粕', 'm_qh', '1'], ['玉米', 'c_qh', '2']],
+            shfe: ['上海期货交易所', ['铜', 'tong_qh', '3'], ['铝', 'lv_qh', '4']]
+        };
+        "#;
+        
+        for exchange in &["czce", "dce", "shfe"] {
+            match parse_exchange_nodes(mock_js, exchange) {
+                Ok(nodes) => {
+                    println!("  {} 品种nodes: {:?}", exchange, nodes);
+                }
+                Err(e) => {
+                    println!("  {} 解析失败: {}", exchange, e);
+                }
+            }
+        }
+        println!("✅ 解析测试完成！");
     }
 }

@@ -84,3 +84,51 @@ pub struct ForeignFuturesSymbol {
     pub symbol: String,   // 品种中文名
     pub code: String,     // 品种代码
 }
+
+/// 主力连续合约信息
+/// 对应 akshare 的 futures_display_main_sina() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesMainContract {
+    pub symbol: String,   // 合约代码（如 V0, RB0）
+    pub name: String,     // 合约名称（如 PVC连续）
+    pub exchange: String, // 交易所代码
+}
+
+/// 主力连续合约日K线数据
+/// 对应 akshare 的 futures_main_sina() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesMainDailyData {
+    pub date: String,           // 日期
+    pub open: f64,              // 开盘价
+    pub high: f64,              // 最高价
+    pub low: f64,               // 最低价
+    pub close: f64,             // 收盘价
+    pub volume: u64,            // 成交量
+    pub hold: u64,              // 持仓量
+    pub settle: Option<f64>,    // 动态结算价
+}
+
+/// 期货持仓排名数据
+/// 对应 akshare 的 futures_hold_pos_sina() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesHoldPosition {
+    pub rank: u32,              // 名次
+    pub company: String,        // 期货公司
+    pub value: i64,             // 数值（成交量/多单持仓/空单持仓）
+    pub change: i64,            // 比上交易日增减
+}
+
+/// 持仓排名查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesHoldPosQuery {
+    pub pos_type: Option<String>,  // 类型：volume(成交量), long(多单持仓), short(空单持仓)
+    pub contract: String,          // 合约代码
+    pub date: String,              // 查询日期 YYYYMMDD
+}
+
+/// 主力连续日数据查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesMainQuery {
+    pub start_date: Option<String>,  // 开始日期 YYYYMMDD
+    pub end_date: Option<String>,    // 结束日期 YYYYMMDD
+}
