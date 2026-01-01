@@ -1549,7 +1549,8 @@ const SPOT_PRICE_URL: &str = "https://www.100ppi.com/sf";
 
 /// 中文品种名称到英文代码的映射
 fn chinese_to_english(name: &str) -> Option<&'static str> {
-    match name {
+    // 先尝试精确匹配
+    let result = match name {
         // 上海期货交易所
         "铜" => Some("CU"),
         "螺纹钢" => Some("RB"),
@@ -1592,9 +1593,9 @@ fn chinese_to_english(name: &str) -> Option<&'static str> {
         "白糖" => Some("SR"),
         "棉花" => Some("CF"),
         "PTA" => Some("TA"),
-        "菜籽油" | "菜油" => Some("OI"),
+        "菜籽油" | "菜油" | "菜籽油OI" => Some("OI"),
         "菜籽粕" | "菜粕" => Some("RM"),
-        "甲醇" => Some("MA"),
+        "甲醇" | "甲醇MA" => Some("MA"),
         "玻璃" => Some("FG"),
         "动力煤" => Some("ZC"),
         "硅铁" => Some("SF"),
@@ -1610,8 +1611,9 @@ fn chinese_to_english(name: &str) -> Option<&'static str> {
         "粳稻" => Some("JR"),
         "晚籼稻" => Some("LR"),
         "早籼稻" => Some("RI"),
-        "强麦" => Some("WH"),
+        "强麦" | "强麦WH" => Some("WH"),
         "普麦" => Some("PM"),
+        "烧碱" => Some("SH"),
         // 上海国际能源交易中心
         "原油" => Some("SC"),
         "20号胶" => Some("NR"),
@@ -1632,7 +1634,19 @@ fn chinese_to_english(name: &str) -> Option<&'static str> {
         // 其他别名
         "PX" => Some("PX"),
         _ => None,
+    };
+    
+    if result.is_some() {
+        return result;
     }
+    
+    // 如果精确匹配失败，尝试模糊匹配（处理带代码后缀的情况）
+    if name.contains("菜籽油") { return Some("OI"); }
+    if name.contains("甲醇") { return Some("MA"); }
+    if name.contains("强麦") { return Some("WH"); }
+    if name.contains("棉纱") { return Some("CY"); }
+    
+    None
 }
 
 /// 获取期货现货价格及基差数据
@@ -1665,9 +1679,8 @@ pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> R
         return Err(anyhow!("获取现货价格数据失败: {}", response.status()));
     }
 
-    // 使用GBK编码读取
-    let bytes = response.bytes().await?;
-    let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+    // 网页是UTF-8编码
+    let text = response.text().await?;
     
     // 解析HTML
     let document = Html::parse_document(&text);
@@ -1692,8 +1705,9 @@ pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> R
             .map(|cell| cell.text().collect::<Vec<_>>().join("").trim().to_string())
             .collect();
         
-        // 需要8列数据
-        if cells.len() < 7 {
+        // 数据行有12个单元格：品种、现货价、近月代码、近月价、近月基差合并、近月基差、近月基差率、主力代码、主力价、主力基差合并、主力基差、主力基差率
+        // 跳过非数据行（少于10个单元格）
+        if cells.len() < 10 {
             continue;
         }
         
@@ -1725,7 +1739,16 @@ pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> R
             }
         }
         
-        // 解析数值 - 第2列是现货价格（去除&nbsp;）
+        // 解析数值
+        // 第1列(index 0): 品种名
+        // 第2列(index 1): 现货价格
+        // 第3列(index 2): 近月合约代码
+        // 第4列(index 3): 近月价格
+        // 第5-7列: 近月基差相关
+        // 第8列(index 7): 主力合约代码
+        // 第9列(index 8): 主力价格
+        // 第10-12列: 主力基差相关
+        
         let spot_price = cells.get(1)
             .map(|s| s.replace('\u{a0}', "").replace(",", ""))
             .and_then(|s| s.trim().parse::<f64>().ok())
@@ -1735,7 +1758,6 @@ pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> R
             continue;
         }
         
-        // 第3列是近月合约代码，第4列是近月价格
         let near_contract_raw = cells.get(2)
             .map(|s| s.replace('\u{a0}', ""))
             .unwrap_or_default();
@@ -1744,11 +1766,10 @@ pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> R
             .and_then(|s| s.trim().parse::<f64>().ok())
             .unwrap_or(0.0);
         
-        // 第6列是主力合约代码，第7列是主力价格
-        let dominant_contract_raw = cells.get(5)
+        let dominant_contract_raw = cells.get(7)
             .map(|s| s.replace('\u{a0}', ""))
             .unwrap_or_default();
-        let dominant_contract_price = cells.get(6)
+        let dominant_contract_price = cells.get(8)
             .map(|s| s.replace('\u{a0}', "").replace(",", ""))
             .and_then(|s| s.trim().parse::<f64>().ok())
             .unwrap_or(0.0);
