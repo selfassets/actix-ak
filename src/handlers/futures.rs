@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Result};
 use crate::models::{
     ApiResponse, FuturesInfo, FuturesHistoryData, FuturesQuery,
-    FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol
+    FuturesSymbolMark, FuturesContractDetail
 };
 use crate::services::futures_service::{
     FuturesService, get_futures_history, get_futures_minute_data,
