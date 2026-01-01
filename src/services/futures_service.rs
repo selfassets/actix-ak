@@ -4,9 +4,9 @@ use chrono_tz::Asia::Shanghai;
 use reqwest::Client;
 use crate::models::{FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange};
 
-// 获取北京时间
-fn get_beijing_time() -> chrono::DateTime<Utc> {
-    Utc::now().with_timezone(&Shanghai).with_timezone(&Utc)
+// 获取北京时间字符串（带+08:00时区）
+fn get_beijing_time() -> String {
+    Utc::now().with_timezone(&Shanghai).to_rfc3339()
 }
 
 const SINA_FUTURES_REALTIME_API: &str = "https://hq.sinajs.cn";
@@ -392,7 +392,7 @@ impl FuturesService {
                 settlement: None,
                 prev_settlement: Some(prev_settlement),
                 open_interest,
-                updated_at: beijing_time.to_rfc3339(),
+                updated_at: beijing_time,
             });
         }
         
@@ -459,7 +459,7 @@ impl FuturesService {
             settlement,
             prev_settlement: Some(prev_settlement),
             open_interest,
-            updated_at: beijing_time.to_rfc3339(),
+            updated_at: beijing_time,
         })
     }
 }
@@ -1043,16 +1043,16 @@ mod tests {
         println!("✅ 分钟K线数据解析测试通过！");
     }
 
-    /// 测试北京时间获取函数 ok
+    /// 测试北京时间获取函数
     #[test]
     fn test_get_beijing_time() {
         println!("\n========== 测试北京时间获取 ==========");
         
         let beijing_time = get_beijing_time();
-        println!("当前北京时间: {}", beijing_time.to_rfc3339());
-        println!("时间戳: {}", beijing_time.timestamp());
+        println!("当前北京时间: {}", beijing_time);
         
-        assert!(beijing_time.timestamp() > 0);
+        // 验证时间字符串包含 +08:00 时区
+        assert!(beijing_time.contains("+08:00"), "时间应该包含北京时区 +08:00");
         println!("✅ 北京时间获取测试通过！");
     }
 

@@ -3,9 +3,9 @@ use chrono::Utc;
 use chrono_tz::Asia::Shanghai;
 use crate::models::{StockInfo, StockHistoryData, StockQuery};
 
-// 获取北京时间
-fn get_beijing_time() -> chrono::DateTime<Utc> {
-    Utc::now().with_timezone(&Shanghai).with_timezone(&Utc)
+// 获取北京时间字符串（带+08:00时区）
+fn get_beijing_time() -> String {
+    Utc::now().with_timezone(&Shanghai).to_rfc3339()
 }
 
 // 模拟股票数据服务 - 在实际应用中，这里会连接到真实的数据源
@@ -20,7 +20,7 @@ pub async fn get_stock_info(symbol: &str) -> Result<StockInfo> {
         change_percent: 1.58,
         volume: 1_234_567,
         market_cap: Some(50_000_000_000.0),
-        updated_at: beijing_time.to_rfc3339(),
+        updated_at: beijing_time,
     };
     
     Ok(stock_info)
@@ -106,7 +106,7 @@ async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
             change_percent: 1.58,
             volume: 1_234_567,
             market_cap: Some(50_000_000_000.0),
-            updated_at: beijing_time.to_rfc3339(),
+            updated_at: beijing_time,
         })
     } else {
         Err(anyhow::anyhow!("Failed to fetch stock data: {}", response.status()))
