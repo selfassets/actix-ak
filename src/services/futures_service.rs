@@ -13,7 +13,8 @@ use crate::models::{
     Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious,
     PositionRankData, RankTableResponse, RankSum,
     CzceWarehouseReceipt, CzceWarehouseReceiptResponse,
-    DceWarehouseReceipt
+    ShfeWarehouseReceipt, ShfeWarehouseReceiptResponse,
+    GfexWarehouseReceipt, GfexWarehouseReceiptResponse
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -3844,8 +3845,16 @@ fn extract_letters(s: &str) -> String {
 /// date: 交易日期，格式 YYYYMMDD
 pub async fn futures_warehouse_receipt_dce(date: &str) -> Result<Vec<DceWarehouseReceipt>> {
     let client = Client::builder()
+        .cookie_store(true)
         .timeout(std::time::Duration::from_secs(30))
         .build()?;
+    
+    // 先访问主页获取cookie
+    let _home_resp = client
+        .get("http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/cdrb/index.html")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .send()
+        .await;
     
     let url = "http://www.dce.com.cn/dcereport/publicweb/dailystat/wbillWeeklyQuotes";
     
@@ -3861,11 +3870,20 @@ pub async fn futures_warehouse_receipt_dce(date: &str) -> Result<Vec<DceWarehous
         .json(&payload)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .header("Accept", "application/json, text/plain, */*")
-        .header("Content-Type", "application/json")
+        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .header("Origin", "http://www.dce.com.cn")
+        .header("Referer", "http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/cdrb/index.html")
         .send()
         .await?;
 
     if !response.status().is_success() {
+        // 大商所API有反爬虫机制，返回更友好的错误信息
+        if response.status().as_u16() == 412 {
+            return Err(anyhow!(
+                "大商所API访问被拒绝(412)，该交易所有反爬虫机制。\n\
+                建议: 1) 稍后重试 2) 使用浏览器手动查看数据"
+            ));
+        }
         return Err(anyhow!("获取大商所仓单日报数据失败: {}，可能是非交易日", response.status()));
     }
 
@@ -3908,6 +3926,107 @@ pub async fn futures_warehouse_receipt_dce(date: &str) -> Result<Vec<DceWarehous
     }
     
     println!("📊 解析到 {} 条仓单日报数据", result.len());
+    Ok(result)
+}
+
+
+/// 广州期货交易所-行情数据-仓单日报
+/// 对应 akshare 的 futures_gfex_warehouse_receipt() 函数
+/// 数据来源: http://www.gfex.com.cn/gfex/cdrb/hqsj_tjsj.shtml
+/// 
+/// date: 交易日期，格式 YYYYMMDD
+pub async fn futures_gfex_warehouse_receipt(date: &str) -> Result<Vec<GfexWarehouseReceiptResponse>> {
+    let client = Client::new();
+    
+    let url = "http://www.gfex.com.cn/u/interfacesWebTdWbillWeeklyQuotes/loadList";
+    
+    let payload = [("gen_date", date)];
+    
+    println!("📡 请求广期所仓单日报数据 URL: {}", url);
+    
+    let response = client
+        .post(url)
+        .form(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取广期所仓单日报数据失败: {}，可能是非交易日", response.status()));
+    }
+
+    let json_data: serde_json::Value = response.json().await?;
+    
+    // 解析数据
+    let data_array = json_data["data"].as_array()
+        .ok_or_else(|| anyhow!("未找到data数组"))?;
+    
+    // 收集所有品种代码
+    let mut symbol_set: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for item in data_array {
+        if let Some(symbol) = item["varietyOrder"].as_str() {
+            if !symbol.is_empty() {
+                symbol_set.insert(symbol.to_uppercase());
+            }
+        }
+    }
+    
+    // 按品种分组数据
+    let mut result: Vec<GfexWarehouseReceiptResponse> = Vec::new();
+    
+    for symbol in symbol_set {
+        let mut data: Vec<GfexWarehouseReceipt> = Vec::new();
+        
+        for item in data_array {
+            let item_symbol = item["varietyOrder"].as_str().unwrap_or("").to_uppercase();
+            if item_symbol != symbol {
+                continue;
+            }
+            
+            // 检查whType是否有效（过滤无效数据）
+            let wh_type = item["whType"].as_str()
+                .or_else(|| item["whType"].as_i64().map(|_| ""))
+                .unwrap_or("");
+            if wh_type.is_empty() && item["whType"].is_null() {
+                continue;
+            }
+            
+            let variety = item["variety"].as_str().unwrap_or("").to_string();
+            let warehouse = item["whAbbr"].as_str().unwrap_or("").to_string();
+            
+            // 解析数值字段
+            let last_receipt = item["lastWbillQty"].as_i64()
+                .or_else(|| item["lastWbillQty"].as_str().and_then(|s| s.parse().ok()))
+                .unwrap_or(0);
+            let today_receipt = item["wbillQty"].as_i64()
+                .or_else(|| item["wbillQty"].as_str().and_then(|s| s.parse().ok()))
+                .unwrap_or(0);
+            let change = item["regWbillQty"].as_i64()
+                .or_else(|| item["regWbillQty"].as_str().and_then(|s| s.parse().ok()))
+                .unwrap_or(0);
+            
+            data.push(GfexWarehouseReceipt {
+                variety,
+                warehouse,
+                last_receipt,
+                today_receipt,
+                change,
+            });
+        }
+        
+        if !data.is_empty() {
+            result.push(GfexWarehouseReceiptResponse {
+                symbol,
+                data,
+            });
+        }
+    }
+    
+    // 按品种代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个品种的仓单日报数据", result.len());
     Ok(result)
 }
 

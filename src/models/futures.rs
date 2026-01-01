@@ -436,3 +436,41 @@ pub struct DceWarehouseReceipt {
     pub today_receipt: i64,                  // 今日仓单量（手）
     pub change: i64,                         // 增减（手）
 }
+
+
+/// 上期所仓单日报数据
+/// 对应 akshare 的 futures_shfe_warehouse_receipt() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ShfeWarehouseReceipt {
+    pub variety: String,                     // 品种名称
+    pub warehouse: String,                   // 仓库简称
+    pub warehouse_receipt: i64,              // 仓单数量
+    pub warehouse_receipt_chg: i64,          // 仓单增减
+    pub unit: String,                        // 单位
+}
+
+/// 上期所仓单日报响应（按品种分组）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ShfeWarehouseReceiptResponse {
+    pub symbol: String,                      // 品种代码
+    pub data: Vec<ShfeWarehouseReceipt>,     // 仓单数据列表
+}
+
+
+/// 广期所仓单日报数据
+/// 对应 akshare 的 futures_gfex_warehouse_receipt() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GfexWarehouseReceipt {
+    pub variety: String,                     // 品种名称
+    pub warehouse: String,                   // 仓库/分库
+    pub last_receipt: i64,                   // 昨日仓单量
+    pub today_receipt: i64,                  // 今日仓单量
+    pub change: i64,                         // 增减
+}
+
+/// 广期所仓单日报响应（按品种分组）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GfexWarehouseReceiptResponse {
+    pub symbol: String,                      // 品种代码
+    pub data: Vec<GfexWarehouseReceipt>,     // 仓单数据列表
+}
