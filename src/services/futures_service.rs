@@ -416,6 +416,7 @@ pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<F
     }
 
     let text = response.text().await?;
+    println!("📥 原始响应数据: {}", &text[..std::cmp::min(500, text.len())]);
     parse_sina_minute_data(&text, symbol)
 }
 
@@ -462,25 +463,55 @@ fn parse_sina_history_data(data: &str, symbol: &str, limit: usize) -> Result<Vec
 }
 
 // 解析新浪期货分钟数据
+// 实际返回格式: =([{"d":"2025-12-16 21:05:00","o":"92080.000","h":"92160.000","l":"91800.000","c":"91820.000","v":"1987","p":"145118"},...])
 fn parse_sina_minute_data(data: &str, symbol: &str) -> Result<Vec<FuturesHistoryData>> {
-    // 数据格式: =([["2024-01-02 09:00","75000","75500","74800","75100","100000","50000"],...]);
     let mut history = Vec::new();
     
+    // 查找JSON数组的起始和结束位置
     let start = data.find("([");
     let end = data.rfind("])");
     
     if start.is_none() || end.is_none() {
-        return Err(anyhow!("Invalid minute data format"));
+        println!("❌ 未找到有效的JSON数据边界");
+        return Err(anyhow!("Invalid minute data format: cannot find JSON boundaries"));
     }
     
+    // 提取JSON数组部分（包含方括号）
     let json_str = &data[start.unwrap() + 1..end.unwrap() + 1];
+    println!("📊 解析JSON数据，长度: {} 字节", json_str.len());
+    
     let json_data: serde_json::Value = serde_json::from_str(json_str)
         .map_err(|e| anyhow!("Failed to parse JSON: {}", e))?;
     
     if let Some(arr) = json_data.as_array() {
+        println!("📈 解析到 {} 条K线数据", arr.len());
+        
         for item in arr.iter() {
-            if let Some(fields) = item.as_array() {
-                if fields.len() >= 7 {
+            // 新格式：JSON对象 {"d": "日期", "o": "开盘", "h": "最高", "l": "最低", "c": "收盘", "v": "成交量", "p": "持仓"}
+            if item.is_object() {
+                let date = item["d"].as_str().unwrap_or("").to_string();
+                let open = item["o"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let high = item["h"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let low = item["l"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let close = item["c"].as_str().unwrap_or("0").parse().unwrap_or(0.0);
+                let volume = item["v"].as_str().unwrap_or("0").parse().unwrap_or(0);
+                let open_interest = item["p"].as_str().unwrap_or("0").parse().ok();
+                
+                history.push(FuturesHistoryData {
+                    symbol: symbol.to_string(),
+                    date,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                    open_interest,
+                    settlement: None,
+                });
+            }
+            // 兼容旧格式：二维数组 [["日期","开盘","最高","最低","收盘","成交量","持仓"],...]
+            else if let Some(fields) = item.as_array() {
+                if fields.len() >= 6 {
                     history.push(FuturesHistoryData {
                         symbol: symbol.to_string(),
                         date: fields[0].as_str().unwrap_or("").to_string(),
@@ -489,7 +520,7 @@ fn parse_sina_minute_data(data: &str, symbol: &str) -> Result<Vec<FuturesHistory
                         low: fields[3].as_str().unwrap_or("0").parse().unwrap_or(0.0),
                         close: fields[4].as_str().unwrap_or("0").parse().unwrap_or(0.0),
                         volume: fields[5].as_str().unwrap_or("0").parse().unwrap_or(0),
-                        open_interest: fields[6].as_str().unwrap_or("0").parse().ok(),
+                        open_interest: fields.get(6).and_then(|v| v.as_str()).and_then(|s| s.parse().ok()),
                         settlement: None,
                     });
                 }
@@ -1096,7 +1127,7 @@ mod tests {
         }
     }
 
-    /// 测试获取所有交易所列表
+    /// 测试获取所有交易所列表 通过
     #[tokio::test]
     async fn test_get_all_exchanges() {
         println!("\n========== 测试获取交易所列表 ==========");
