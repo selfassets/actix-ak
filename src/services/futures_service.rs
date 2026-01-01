@@ -499,86 +499,154 @@ fn parse_sina_minute_data(data: &str, symbol: &str) -> Result<Vec<FuturesHistory
 mod tests {
     use super::*;
 
+    /// 测试商品期货合约代码格式化
+    /// 商品期货使用小写 nf_ 前缀
     #[test]
     fn test_format_symbol_for_realtime_commodity() {
+        println!("\n========== 测试商品期货合约代码格式化 ==========");
         let service = FuturesService::new();
         
-        // 测试商品期货合约代码格式化
-        assert_eq!(service.format_symbol_for_realtime("CU2405"), "nf_CU2405");
-        assert_eq!(service.format_symbol_for_realtime("AL2405"), "nf_AL2405");
-        assert_eq!(service.format_symbol_for_realtime("RB2405"), "nf_RB2405");
-        assert_eq!(service.format_symbol_for_realtime("V2309"), "nf_V2309");
+        let test_cases = vec![
+            ("CU2405", "nf_CU2405"),  // 铜
+            ("AL2405", "nf_AL2405"),  // 铝
+            ("RB2405", "nf_RB2405"),  // 螺纹钢
+            ("V2309", "nf_V2309"),    // PVC
+        ];
+        
+        for (input, expected) in &test_cases {
+            let result = service.format_symbol_for_realtime(input);
+            println!("输入: {} -> 输出: {} (期望: {})", input, result, expected);
+            assert_eq!(result, *expected);
+        }
+        println!("✅ 商品期货格式化测试通过！");
     }
 
+    /// 测试金融期货合约代码格式化
+    /// 金融期货使用 CFF_ 前缀
     #[test]
     fn test_format_symbol_for_realtime_financial() {
+        println!("\n========== 测试金融期货合约代码格式化 ==========");
         let service = FuturesService::new();
         
-        // 测试金融期货合约代码格式化
-        assert_eq!(service.format_symbol_for_realtime("IF2401"), "CFF_IF2401");
-        assert_eq!(service.format_symbol_for_realtime("IC2401"), "CFF_IC2401");
-        assert_eq!(service.format_symbol_for_realtime("IH2401"), "CFF_IH2401");
-        assert_eq!(service.format_symbol_for_realtime("T2406"), "CFF_T2406");
-        assert_eq!(service.format_symbol_for_realtime("TF2406"), "CFF_TF2406");
+        let test_cases = vec![
+            ("IF2401", "CFF_IF2401"),  // 沪深300股指
+            ("IC2401", "CFF_IC2401"),  // 中证500股指
+            ("IH2401", "CFF_IH2401"),  // 上证50股指
+            ("T2406", "CFF_T2406"),    // 10年期国债
+            ("TF2406", "CFF_TF2406"),  // 5年期国债
+        ];
+        
+        for (input, expected) in &test_cases {
+            let result = service.format_symbol_for_realtime(input);
+            println!("输入: {} -> 输出: {} (期望: {})", input, result, expected);
+            assert_eq!(result, *expected);
+        }
+        println!("✅ 金融期货格式化测试通过！");
     }
 
+    /// 测试已格式化的合约代码
+    /// 已有前缀的代码应保持不变
     #[test]
     fn test_format_symbol_already_formatted() {
+        println!("\n========== 测试已格式化的合约代码 ==========");
         let service = FuturesService::new();
         
-        // 测试已经格式化的合约代码
-        assert_eq!(service.format_symbol_for_realtime("nf_CU2405"), "nf_CU2405");
-        assert_eq!(service.format_symbol_for_realtime("NF_CU2405"), "nf_CU2405");
-        assert_eq!(service.format_symbol_for_realtime("CFF_IF2401"), "CFF_IF2401");
+        let test_cases = vec![
+            ("nf_CU2405", "nf_CU2405"),   // 小写前缀
+            ("NF_CU2405", "nf_CU2405"),   // 大写前缀转小写
+            ("CFF_IF2401", "CFF_IF2401"), // 金融期货前缀
+        ];
+        
+        for (input, expected) in &test_cases {
+            let result = service.format_symbol_for_realtime(input);
+            println!("输入: {} -> 输出: {} (期望: {})", input, result, expected);
+            assert_eq!(result, *expected);
+        }
+        println!("✅ 已格式化代码测试通过！");
     }
 
+    /// 测试中金所合约判断
+    /// 判断合约是否属于中国金融期货交易所
     #[test]
     fn test_is_cffex_symbol() {
+        println!("\n========== 测试中金所合约判断 ==========");
         let service = FuturesService::new();
         
-        // 测试金融期货品种判断
-        assert!(service.is_cffex_symbol("IF2401"));
-        assert!(service.is_cffex_symbol("IC2401"));
-        assert!(service.is_cffex_symbol("IH2401"));
-        assert!(service.is_cffex_symbol("T2406"));
-        assert!(service.is_cffex_symbol("TF2406"));
-        assert!(service.is_cffex_symbol("TS2406"));
+        // 金融期货品种（应返回 true）
+        let cffex_symbols = vec!["IF2401", "IC2401", "IH2401", "T2406", "TF2406", "TS2406"];
+        println!("金融期货品种测试:");
+        for symbol in &cffex_symbols {
+            let result = service.is_cffex_symbol(symbol);
+            println!("  {} -> {} (期望: true)", symbol, result);
+            assert!(result);
+        }
         
-        // 测试商品期货品种判断
-        assert!(!service.is_cffex_symbol("CU2405"));
-        assert!(!service.is_cffex_symbol("AL2405"));
-        assert!(!service.is_cffex_symbol("RB2405"));
+        // 商品期货品种（应返回 false）
+        let commodity_symbols = vec!["CU2405", "AL2405", "RB2405"];
+        println!("商品期货品种测试:");
+        for symbol in &commodity_symbols {
+            let result = service.is_cffex_symbol(symbol);
+            println!("  {} -> {} (期望: false)", symbol, result);
+            assert!(!result);
+        }
+        println!("✅ 中金所合约判断测试通过！");
     }
 
+    /// 测试交易所节点映射
+    /// 将交易所代码映射为新浪API的node参数
     #[test]
     fn test_get_exchange_node() {
+        println!("\n========== 测试交易所节点映射 ==========");
         let service = FuturesService::new();
         
-        assert_eq!(service.get_exchange_node("DCE"), "dce_qh");
-        assert_eq!(service.get_exchange_node("CZCE"), "czce_qh");
-        assert_eq!(service.get_exchange_node("SHFE"), "shfe_qh");
-        assert_eq!(service.get_exchange_node("CFFEX"), "cffex_qh");
-        assert_eq!(service.get_exchange_node("INE"), "ine_qh");
-        assert_eq!(service.get_exchange_node("dce"), "dce_qh"); // 测试小写
-        assert_eq!(service.get_exchange_node("unknown"), "dce_qh"); // 测试未知交易所
+        let test_cases = vec![
+            ("DCE", "dce_qh", "大商所"),
+            ("CZCE", "czce_qh", "郑商所"),
+            ("SHFE", "shfe_qh", "上期所"),
+            ("CFFEX", "cffex_qh", "中金所"),
+            ("INE", "ine_qh", "能源中心"),
+            ("dce", "dce_qh", "小写测试"),
+            ("unknown", "dce_qh", "未知交易所默认"),
+        ];
+        
+        for (input, expected, desc) in &test_cases {
+            let result = service.get_exchange_node(input);
+            println!("{}: {} -> {} (期望: {})", desc, input, result, expected);
+            assert_eq!(result, *expected);
+        }
+        println!("✅ 交易所节点映射测试通过！");
     }
 
+    /// 测试随机码生成
+    /// 生成用于新浪API的rn参数
     #[test]
     fn test_generate_random_code() {
+        println!("\n========== 测试随机码生成 ==========");
         let service = FuturesService::new();
         
         let code1 = service.generate_random_code();
         let code2 = service.generate_random_code();
         
-        // 验证生成的是十六进制字符串
+        println!("生成的随机码1: {}", code1);
+        println!("生成的随机码2: {}", code2);
+        println!("验证: 都是十六进制字符串");
+        
         assert!(code1.chars().all(|c| c.is_ascii_hexdigit()));
         assert!(code2.chars().all(|c| c.is_ascii_hexdigit()));
+        println!("✅ 随机码生成测试通过！");
     }
 
+    /// 测试获取交易所列表
     #[test]
     fn test_get_exchanges() {
+        println!("\n========== 测试获取交易所列表 ==========");
         let service = FuturesService::new();
         let exchanges = service.get_exchanges();
+        
+        println!("交易所数量: {}", exchanges.len());
+        for ex in &exchanges {
+            println!("  【{}】{} - {}", ex.code, ex.name, ex.description);
+        }
         
         assert_eq!(exchanges.len(), 5);
         
@@ -588,19 +656,34 @@ mod tests {
         assert!(codes.contains(&"SHFE"));
         assert!(codes.contains(&"INE"));
         assert!(codes.contains(&"CFFEX"));
+        println!("✅ 交易所列表测试通过！");
     }
 
+    /// 测试解析新浪实时数据（有效数据）
     #[test]
     fn test_parse_sina_realtime_data_valid() {
+        println!("\n========== 测试解析新浪实时数据（有效数据） ==========");
         let service = FuturesService::new();
         
         // 模拟新浪API返回的数据格式
         let mock_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000,75500,74800,74900,75100,75200,75150,75100,74950,100,200,50000,100000,0,0,0,0,0,0,0,0,0,0,0,0,0";"#;
+        println!("模拟数据: {}", mock_data);
         
         let result = service.parse_sina_realtime_data(mock_data, "CU2405");
         assert!(result.is_ok());
         
         let info = result.unwrap();
+        println!("解析结果:");
+        println!("  合约代码: {}", info.symbol);
+        println!("  合约名称: {}", info.name);
+        println!("  开盘价: {}", info.open);
+        println!("  最高价: {}", info.high);
+        println!("  最低价: {}", info.low);
+        println!("  最新价: {}", info.current_price);
+        println!("  昨结算: {:?}", info.prev_settlement);
+        println!("  成交量: {}", info.volume);
+        println!("  持仓量: {:?}", info.open_interest);
+        
         assert_eq!(info.symbol, "CU2405");
         assert_eq!(info.name, "铜2405");
         assert_eq!(info.open, 75000.0);
@@ -610,47 +693,70 @@ mod tests {
         assert_eq!(info.prev_settlement, Some(74950.0));
         assert_eq!(info.volume, 100000);
         assert_eq!(info.open_interest, Some(50000));
+        println!("✅ 有效数据解析测试通过！");
     }
 
+    /// 测试解析新浪实时数据（空数据）
     #[test]
     fn test_parse_sina_realtime_data_empty() {
+        println!("\n========== 测试解析新浪实时数据（空数据） ==========");
         let service = FuturesService::new();
         
-        // 测试空数据
         let empty_data = r#"var hq_str_nf_CU2405="";"#;
+        println!("模拟空数据: {}", empty_data);
+        
         let result = service.parse_sina_realtime_data(empty_data, "CU2405");
+        println!("解析结果: {:?}", result.is_err());
+        
         assert!(result.is_err());
+        println!("✅ 空数据处理测试通过（正确返回错误）！");
     }
 
+    /// 测试解析新浪实时数据（字段不足）
     #[test]
     fn test_parse_sina_realtime_data_insufficient_fields() {
+        println!("\n========== 测试解析新浪实时数据（字段不足） ==========");
         let service = FuturesService::new();
         
-        // 测试字段不足的数据
         let insufficient_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000";"#;
+        println!("模拟不完整数据: {}", insufficient_data);
+        
         let result = service.parse_sina_realtime_data(insufficient_data, "CU2405");
+        println!("解析结果: {:?}", result.is_err());
+        
         assert!(result.is_err());
+        println!("✅ 字段不足处理测试通过（正确返回错误）！");
     }
 
+    /// 测试解析多个合约实时数据
     #[test]
     fn test_parse_multiple_realtime_data() {
+        println!("\n========== 测试解析多个合约实时数据 ==========");
         let service = FuturesService::new();
         
-        // 模拟多个合约的数据
         let mock_data = r#"var hq_str_nf_CU2405="铜2405,09:00:00,75000,75500,74800,74900,75100,75200,75150,75100,74950,100,200,50000,100000,0,0,0,0,0,0,0,0,0,0,0,0,0";var hq_str_nf_AL2405="铝2405,09:00:00,19000,19200,18900,18950,19050,19100,19080,19050,18980,50,100,30000,80000,0,0,0,0,0,0,0,0,0,0,0,0,0";"#;
+        println!("模拟多合约数据（铜、铝）");
         
         let symbols = vec!["CU2405".to_string(), "AL2405".to_string()];
         let result = service.parse_multiple_realtime_data(mock_data, &symbols);
         assert!(result.is_ok());
         
         let infos = result.unwrap();
+        println!("解析结果: 共 {} 条数据", infos.len());
+        for info in &infos {
+            println!("  【{}】{} - 最新价: {}", info.symbol, info.name, info.current_price);
+        }
+        
         assert_eq!(infos.len(), 2);
         assert_eq!(infos[0].symbol, "CU2405");
         assert_eq!(infos[1].symbol, "AL2405");
+        println!("✅ 多合约数据解析测试通过！");
     }
 
+    /// 测试解析新浪期货列表数据
     #[test]
     fn test_parse_sina_list_data() {
+        println!("\n========== 测试解析新浪期货列表数据 ==========");
         let service = FuturesService::new();
         
         // 模拟新浪期货列表API返回的JSON数据
@@ -666,11 +772,24 @@ mod tests {
             "position": "50000",
             "settlement": "75100"
         });
+        println!("模拟JSON数据: {}", mock_json);
         
         let result = service.parse_sina_list_data(&mock_json);
         assert!(result.is_ok());
         
         let info = result.unwrap();
+        println!("解析结果:");
+        println!("  合约代码: {}", info.symbol);
+        println!("  合约名称: {}", info.name);
+        println!("  最新价: {}", info.current_price);
+        println!("  昨结算: {:?}", info.prev_settlement);
+        println!("  开盘价: {}", info.open);
+        println!("  最高价: {}", info.high);
+        println!("  最低价: {}", info.low);
+        println!("  成交量: {}", info.volume);
+        println!("  持仓量: {:?}", info.open_interest);
+        println!("  结算价: {:?}", info.settlement);
+        
         assert_eq!(info.symbol, "CU2405");
         assert_eq!(info.name, "铜2405");
         assert_eq!(info.current_price, 75150.0);
@@ -681,17 +800,30 @@ mod tests {
         assert_eq!(info.volume, 100000);
         assert_eq!(info.open_interest, Some(50000));
         assert_eq!(info.settlement, Some(75100.0));
+        println!("✅ 期货列表数据解析测试通过！");
     }
 
+    /// 测试解析新浪历史K线数据
     #[test]
     fn test_parse_sina_history_data() {
+        println!("\n========== 测试解析新浪历史K线数据 ==========");
+        
         // 模拟新浪历史数据API返回格式
         let mock_data = r#"var _temp=([["2024-01-02","75000","75500","74800","75100","100000","50000","75050"],["2024-01-03","75100","75600","74900","75200","110000","51000","75150"]]);"#;
+        println!("模拟历史数据格式");
         
         let result = parse_sina_history_data(mock_data, "CU2405", 10);
         assert!(result.is_ok());
         
         let history = result.unwrap();
+        println!("解析结果: 共 {} 条K线数据", history.len());
+        println!("{:<12} {:>10} {:>10} {:>10} {:>10} {:>10}", "日期", "开盘", "最高", "最低", "收盘", "成交量");
+        println!("{}", "-".repeat(70));
+        for data in &history {
+            println!("{:<12} {:>10.0} {:>10.0} {:>10.0} {:>10.0} {:>10}", 
+                data.date, data.open, data.high, data.low, data.close, data.volume);
+        }
+        
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].date, "2024-01-02");
         assert_eq!(history[0].open, 75000.0);
@@ -699,26 +831,279 @@ mod tests {
         assert_eq!(history[0].low, 74800.0);
         assert_eq!(history[0].close, 75100.0);
         assert_eq!(history[0].volume, 100000);
+        println!("✅ 历史K线数据解析测试通过！");
     }
 
+    /// 测试解析新浪分钟K线数据
     #[test]
     fn test_parse_sina_minute_data() {
+        println!("\n========== 测试解析新浪分钟K线数据 ==========");
+        
         // 模拟新浪分钟数据API返回格式
         let mock_data = r#"=([["2024-01-02 09:00","75000","75100","74950","75050","10000","50000"],["2024-01-02 09:01","75050","75150","75000","75100","8000","50100"]]);"#;
+        println!("模拟分钟数据格式");
         
         let result = parse_sina_minute_data(mock_data, "CU2405");
         assert!(result.is_ok());
         
         let history = result.unwrap();
+        println!("解析结果: 共 {} 条分钟数据", history.len());
+        println!("{:<20} {:>10} {:>10} {:>10} {:>10}", "时间", "开盘", "最高", "最低", "收盘");
+        println!("{}", "-".repeat(70));
+        for data in &history {
+            println!("{:<20} {:>10.0} {:>10.0} {:>10.0} {:>10.0}", 
+                data.date, data.open, data.high, data.low, data.close);
+        }
+        
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].date, "2024-01-02 09:00");
         assert_eq!(history[0].open, 75000.0);
+        println!("✅ 分钟K线数据解析测试通过！");
     }
 
+    /// 测试北京时间获取函数
     #[test]
     fn test_get_beijing_time() {
+        println!("\n========== 测试北京时间获取 ==========");
+        
         let beijing_time = get_beijing_time();
-        // 验证返回的是有效的时间
+        println!("当前北京时间: {}", beijing_time.to_rfc3339());
+        println!("时间戳: {}", beijing_time.timestamp());
+        
         assert!(beijing_time.timestamp() > 0);
+        println!("✅ 北京时间获取测试通过！");
+    }
+
+    // ==================== 异步集成测试 ====================
+    // 以下测试会实际调用新浪API，需要网络连接
+    // 运行命令: cargo test -- --nocapture
+
+    /// 测试获取单个期货合约实时数据
+    /// 调用新浪API获取铜期货(CU)的实时行情并输出
+    #[tokio::test]
+    async fn test_fetch_single_futures_realtime() {
+        println!("\n========== 测试获取单个期货合约实时数据 ==========");
+        
+        let service = FuturesService::new();
+        let symbol = "CU2501"; // 铜期货合约
+        
+        println!("正在获取合约 {} 的实时数据...", symbol);
+        
+        match service.get_futures_info(symbol).await {
+            Ok(info) => {
+                println!("✅ 获取成功！");
+                println!("----------------------------------------");
+                println!("合约代码: {}", info.symbol);
+                println!("合约名称: {}", info.name);
+                println!("最新价格: {:.2}", info.current_price);
+                println!("涨跌额: {:.2}", info.change);
+                println!("涨跌幅: {:.2}%", info.change_percent);
+                println!("开盘价: {:.2}", info.open);
+                println!("最高价: {:.2}", info.high);
+                println!("最低价: {:.2}", info.low);
+                println!("昨结算: {:?}", info.prev_settlement);
+                println!("成交量: {}", info.volume);
+                println!("持仓量: {:?}", info.open_interest);
+                println!("更新时间: {}", info.updated_at);
+                println!("----------------------------------------");
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+                println!("提示: 可能是非交易时间或网络问题");
+            }
+        }
+    }
+
+    /// 测试批量获取多个期货合约实时数据
+    /// 同时获取铜、铝、螺纹钢的实时行情
+    #[tokio::test]
+    async fn test_fetch_multiple_futures_realtime() {
+        println!("\n========== 测试批量获取期货合约实时数据 ==========");
+        
+        let service = FuturesService::new();
+        let symbols = vec![
+            "CU2501".to_string(),  // 铜
+            "AL2501".to_string(),  // 铝
+            "RB2501".to_string(),  // 螺纹钢
+        ];
+        
+        println!("正在批量获取合约 {:?} 的实时数据...", symbols);
+        
+        match service.get_multiple_futures(&symbols).await {
+            Ok(infos) => {
+                println!("✅ 获取成功！共 {} 条数据", infos.len());
+                println!("========================================");
+                
+                for info in &infos {
+                    println!("【{}】{}", info.symbol, info.name);
+                    println!("  最新价: {:.2} | 涨跌: {:.2} ({:.2}%)", 
+                        info.current_price, info.change, info.change_percent);
+                    println!("  开: {:.2} | 高: {:.2} | 低: {:.2}", 
+                        info.open, info.high, info.low);
+                    println!("  成交量: {} | 持仓: {:?}", info.volume, info.open_interest);
+                    println!("----------------------------------------");
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取金融期货（股指期货）实时数据
+    /// 金融期货使用 CFF_ 前缀
+    #[tokio::test]
+    async fn test_fetch_financial_futures_realtime() {
+        println!("\n========== 测试获取金融期货实时数据 ==========");
+        
+        let service = FuturesService::new();
+        let symbol = "IF2501"; // 沪深300股指期货
+        
+        println!("正在获取金融期货 {} 的实时数据...", symbol);
+        println!("(金融期货使用 CFF_ 前缀)");
+        
+        match service.get_futures_info(symbol).await {
+            Ok(info) => {
+                println!("✅ 获取成功！");
+                println!("----------------------------------------");
+                println!("合约代码: {}", info.symbol);
+                println!("合约名称: {}", info.name);
+                println!("最新价格: {:.2}", info.current_price);
+                println!("涨跌幅: {:.2}%", info.change_percent);
+                println!("成交量: {}", info.volume);
+                println!("----------------------------------------");
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+                println!("提示: 金融期货交易时间为工作日 9:30-11:30, 13:00-15:00");
+            }
+        }
+    }
+
+    /// 测试获取期货列表（按交易所）
+    /// 从新浪API获取指定交易所的期货品种列表
+    #[tokio::test]
+    async fn test_fetch_futures_list_by_exchange() {
+        println!("\n========== 测试获取期货列表（按交易所） ==========");
+        
+        let service = FuturesService::new();
+        
+        // 测试获取大商所期货列表
+        let query = FuturesQuery {
+            symbol: None,
+            exchange: Some("DCE".to_string()),
+            category: None,
+            limit: Some(5),
+            start_date: None,
+            end_date: None,
+        };
+        
+        println!("正在获取大商所(DCE)期货列表，限制 {} 条...", query.limit.unwrap());
+        
+        match service.list_main_futures(&query).await {
+            Ok(futures_list) => {
+                println!("✅ 获取成功！共 {} 条数据", futures_list.len());
+                println!("========================================");
+                
+                for (i, info) in futures_list.iter().enumerate() {
+                    println!("{}. 【{}】{}", i + 1, info.symbol, info.name);
+                    println!("   最新价: {:.2} | 涨跌幅: {:.2}%", 
+                        info.current_price, info.change_percent);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取期货历史K线数据
+    /// 获取指定合约的日线历史数据
+    #[tokio::test]
+    async fn test_fetch_futures_history() {
+        println!("\n========== 测试获取期货历史K线数据 ==========");
+        
+        let symbol = "CU2501";
+        let query = FuturesQuery {
+            symbol: None,
+            exchange: None,
+            category: None,
+            limit: Some(10),
+            start_date: None,
+            end_date: None,
+        };
+        
+        println!("正在获取 {} 的历史K线数据，限制 {} 条...", symbol, query.limit.unwrap());
+        
+        match get_futures_history(symbol, &query).await {
+            Ok(history) => {
+                println!("✅ 获取成功！共 {} 条数据", history.len());
+                println!("========================================");
+                println!("{:<12} {:>10} {:>10} {:>10} {:>10} {:>12}", 
+                    "日期", "开盘", "最高", "最低", "收盘", "成交量");
+                println!("----------------------------------------");
+                
+                for data in &history {
+                    println!("{:<12} {:>10.2} {:>10.2} {:>10.2} {:>10.2} {:>12}", 
+                        data.date, data.open, data.high, data.low, data.close, data.volume);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+                println!("提示: 历史数据可能需要有效的合约代码");
+            }
+        }
+    }
+
+    /// 测试获取期货分钟K线数据
+    /// 获取指定合约的分钟级别数据
+    #[tokio::test]
+    async fn test_fetch_futures_minute_data() {
+        println!("\n========== 测试获取期货分钟K线数据 ==========");
+        
+        let symbol = "CU2501";
+        let period = "5"; // 5分钟K线
+        
+        println!("正在获取 {} 的 {}分钟 K线数据...", symbol, period);
+        
+        match get_futures_minute_data(symbol, period).await {
+            Ok(history) => {
+                println!("✅ 获取成功！共 {} 条数据", history.len());
+                println!("========================================");
+                
+                // 只显示最近10条
+                let display_count = std::cmp::min(10, history.len());
+                println!("显示最近 {} 条数据:", display_count);
+                println!("{:<20} {:>10} {:>10} {:>10} {:>10}", 
+                    "时间", "开盘", "最高", "最低", "收盘");
+                println!("----------------------------------------");
+                
+                for data in history.iter().rev().take(display_count) {
+                    println!("{:<20} {:>10.2} {:>10.2} {:>10.2} {:>10.2}", 
+                        data.date, data.open, data.high, data.low, data.close);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+                println!("提示: 分钟数据可能只在交易时间内有效");
+            }
+        }
+    }
+
+    /// 测试获取所有交易所列表
+    #[tokio::test]
+    async fn test_get_all_exchanges() {
+        println!("\n========== 测试获取交易所列表 ==========");
+        
+        let service = FuturesService::new();
+        let exchanges = service.get_exchanges();
+        
+        println!("✅ 支持的交易所列表:");
+        println!("========================================");
+        
+        for exchange in &exchanges {
+            println!("【{}】{}", exchange.code, exchange.name);
+            println!("  英文: {}", exchange.description);
+        }
     }
 }
