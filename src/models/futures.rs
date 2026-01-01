@@ -313,3 +313,94 @@ pub struct FuturesSpotPriceDailyQuery {
     pub end_date: String,                // 结束日期 YYYYMMDD
     pub symbols: Option<String>,         // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
 }
+
+
+/// 期货持仓排名汇总数据
+/// 对应 akshare 的 get_rank_sum() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RankSum {
+    pub symbol: String,                      // 标的合约
+    pub variety: String,                     // 商品品种
+    pub vol_top5: i64,                       // 成交量前5会员成交量总和
+    pub vol_chg_top5: i64,                   // 成交量前5会员成交量变化总和
+    pub long_open_interest_top5: i64,        // 持多单前5会员持多单总和
+    pub long_open_interest_chg_top5: i64,    // 持多单前5会员持多单变化总和
+    pub short_open_interest_top5: i64,       // 持空单前5会员持空单总和
+    pub short_open_interest_chg_top5: i64,   // 持空单前5会员持空单变化总和
+    pub vol_top10: i64,                      // 成交量前10会员成交量总和
+    pub vol_chg_top10: i64,                  // 成交量前10会员成交量变化总和
+    pub long_open_interest_top10: i64,       // 持多单前10会员持多单总和
+    pub long_open_interest_chg_top10: i64,   // 持多单前10会员持多单变化总和
+    pub short_open_interest_top10: i64,      // 持空单前10会员持空单总和
+    pub short_open_interest_chg_top10: i64,  // 持空单前10会员持空单变化总和
+    pub vol_top15: i64,                      // 成交量前15会员成交量总和
+    pub vol_chg_top15: i64,                  // 成交量前15会员成交量变化总和
+    pub long_open_interest_top15: i64,       // 持多单前15会员持多单总和
+    pub long_open_interest_chg_top15: i64,   // 持多单前15会员持多单变化总和
+    pub short_open_interest_top15: i64,      // 持空单前15会员持空单总和
+    pub short_open_interest_chg_top15: i64,  // 持空单前15会员持空单变化总和
+    pub vol_top20: i64,                      // 成交量前20会员成交量总和
+    pub vol_chg_top20: i64,                  // 成交量前20会员成交量变化总和
+    pub long_open_interest_top20: i64,       // 持多单前20会员持多单总和
+    pub long_open_interest_chg_top20: i64,   // 持多单前20会员持多单变化总和
+    pub short_open_interest_top20: i64,      // 持空单前20会员持空单总和
+    pub short_open_interest_chg_top20: i64,  // 持空单前20会员持空单变化总和
+    pub date: String,                        // 日期 YYYYMMDD
+}
+
+/// 期货持仓排名原始数据（单个会员）
+#[derive(Debug, Clone)]
+pub struct PositionRankRow {
+    pub rank: i32,                           // 排名
+    pub vol_party_name: String,              // 成交量排序的当前名次会员
+    pub vol: i64,                            // 该会员成交量
+    pub vol_chg: i64,                        // 该会员成交量变化量
+    pub long_party_name: String,             // 持多单排序的当前名次会员
+    pub long_open_interest: i64,             // 该会员持多单
+    pub long_open_interest_chg: i64,         // 该会员持多单变化量
+    pub short_party_name: String,            // 持空单排序的当前名次会员
+    pub short_open_interest: i64,            // 该会员持空单
+    pub short_open_interest_chg: i64,        // 该会员持空单变化量
+    pub symbol: String,                      // 标的合约
+    pub variety: String,                     // 品种
+}
+
+/// 期货持仓排名日线查询参数
+#[derive(Debug, Deserialize)]
+pub struct RankSumDailyQuery {
+    pub start_date: String,              // 开始日期 YYYYMMDD
+    pub end_date: String,                // 结束日期 YYYYMMDD
+    pub vars: Option<String>,            // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
+}
+
+/// 期货持仓排名表数据（单个会员）
+/// 对应 akshare 的 get_shfe_rank_table/get_dce_rank_table/get_cffex_rank_table/get_rank_table_czce 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PositionRankData {
+    pub rank: i32,                           // 排名
+    pub vol_party_name: String,              // 成交量排序的当前名次会员
+    pub vol: i64,                            // 该会员成交量
+    pub vol_chg: i64,                        // 该会员成交量变化量
+    pub long_party_name: String,             // 持多单排序的当前名次会员
+    pub long_open_interest: i64,             // 该会员持多单
+    pub long_open_interest_chg: i64,         // 该会员持多单变化量
+    pub short_party_name: String,            // 持空单排序的当前名次会员
+    pub short_open_interest: i64,            // 该会员持空单
+    pub short_open_interest_chg: i64,        // 该会员持空单变化量
+    pub symbol: String,                      // 标的合约
+    pub variety: String,                     // 品种
+}
+
+/// 期货持仓排名表查询参数
+#[derive(Debug, Deserialize)]
+pub struct RankTableQuery {
+    pub date: String,                        // 交易日期 YYYYMMDD
+    pub vars: Option<String>,                // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
+}
+
+/// 期货持仓排名表响应（按合约分组）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RankTableResponse {
+    pub symbol: String,                      // 合约代码
+    pub data: Vec<PositionRankData>,         // 排名数据列表
+}

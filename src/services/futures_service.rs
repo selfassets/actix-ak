@@ -10,7 +10,8 @@ use crate::models::{
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
     FuturesFeesInfo, FuturesCommInfo, FuturesRule,
-    Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious
+    Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious,
+    PositionRankData, RankTableResponse
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -2577,6 +2578,522 @@ fn parse_hold_pos_html(html: &str, table_index: usize, pos_type: &str) -> Result
 }
 
 
+// ==================== 期货持仓排名表（交易所数据） ====================
+
+/// 上海期货交易所会员成交及持仓排名表API
+const SHFE_VOL_RANK_URL: &str = "https://www.shfe.com.cn/data/tradedata/future/dailydata/pm";
+
+/// 中国金融期货交易所持仓排名API
+const CFFEX_VOL_RANK_URL: &str = "http://www.cffex.com.cn/sj/ccpm";
+
+/// 郑州商品交易所持仓排名API
+const CZCE_VOL_RANK_URL: &str = "http://www.czce.com.cn/cn/DFSStaticFiles/Future";
+
+/// 大连商品交易所持仓排名API
+const DCE_VOL_RANK_URL: &str = "http://www.dce.com.cn/dcereport/publicweb/dailystat/memberDealPosi/batchDownload";
+
+/// 从合约代码中提取品种代码
+fn extract_variety(symbol: &str) -> String {
+    let re = Regex::new(r"^([A-Za-z]+)").unwrap();
+    re.captures(symbol)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_uppercase())
+        .unwrap_or_default()
+}
+
+/// 获取上海期货交易所会员成交及持仓排名表
+/// 对应 akshare 的 get_shfe_rank_table() 函数
+/// 数据来源: https://www.shfe.com.cn/
+/// date: 交易日期，格式 YYYYMMDD，数据从 20020107 开始
+/// vars_list: 品种代码列表，如 ["CU", "AL"]，为空时返回所有品种
+pub async fn get_shfe_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
+    let client = Client::new();
+    
+    let url = format!("{}{}.dat", SHFE_VOL_RANK_URL, date);
+    println!("📡 请求上期所持仓排名数据 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取上期所持仓排名数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    
+    // 解析JSON数据
+    let json_data: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| anyhow!("解析JSON失败: {}", e))?;
+    
+    let cursor = json_data["o_cursor"].as_array()
+        .ok_or_else(|| anyhow!("未找到o_cursor数据"))?;
+    
+    // 按合约分组
+    let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
+    
+    for item in cursor {
+        let rank = item["RANK"].as_i64().unwrap_or(0) as i32;
+        if rank <= 0 {
+            continue;
+        }
+        
+        let symbol = item["INSTRUMENTID"].as_str().unwrap_or("").trim().to_uppercase();
+        if symbol.is_empty() {
+            continue;
+        }
+        
+        let variety = extract_variety(&symbol);
+        
+        // 如果指定了品种列表，检查是否在列表中
+        if let Some(ref vars) = vars_list {
+            if !vars.iter().any(|v| v.eq_ignore_ascii_case(&variety)) {
+                continue;
+            }
+        }
+        
+        let data = PositionRankData {
+            rank,
+            vol_party_name: item["PARTICIPANTABBR1"].as_str().unwrap_or("").trim().to_string(),
+            vol: item["CJ1"].as_i64().unwrap_or(0),
+            vol_chg: item["CJ1_CHG"].as_i64().unwrap_or(0),
+            long_party_name: item["PARTICIPANTABBR2"].as_str().unwrap_or("").trim().to_string(),
+            long_open_interest: item["CJ2"].as_i64().unwrap_or(0),
+            long_open_interest_chg: item["CJ2_CHG"].as_i64().unwrap_or(0),
+            short_party_name: item["PARTICIPANTABBR3"].as_str().unwrap_or("").trim().to_string(),
+            short_open_interest: item["CJ3"].as_i64().unwrap_or(0),
+            short_open_interest_chg: item["CJ3_CHG"].as_i64().unwrap_or(0),
+            symbol: symbol.clone(),
+            variety,
+        };
+        
+        symbol_data.entry(symbol).or_insert_with(Vec::new).push(data);
+    }
+    
+    // 转换为响应格式
+    let mut result: Vec<RankTableResponse> = symbol_data.into_iter()
+        .map(|(symbol, data)| RankTableResponse { symbol, data })
+        .collect();
+    
+    // 按合约代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", result.len());
+    Ok(result)
+}
+
+/// 获取中国金融期货交易所前20会员持仓排名数据
+/// 对应 akshare 的 get_cffex_rank_table() 函数
+/// 数据来源: http://www.cffex.com.cn/ccpm/
+/// date: 交易日期，格式 YYYYMMDD，数据从 20100416 开始
+/// vars_list: 品种代码列表，如 ["IF", "IC"]，为空时返回所有品种
+pub async fn get_cffex_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
+    let client = Client::new();
+    
+    // 中金所品种列表
+    let cffex_vars = vec!["IF", "IC", "IM", "IH", "T", "TF", "TS", "TL"];
+    
+    // 过滤品种
+    let target_vars: Vec<&str> = match vars_list {
+        Some(vars) => vars.into_iter()
+            .filter(|v| cffex_vars.iter().any(|cv| cv.eq_ignore_ascii_case(v)))
+            .collect(),
+        None => cffex_vars.clone(),
+    };
+    
+    let mut all_results: Vec<RankTableResponse> = Vec::new();
+    
+    // 格式化日期
+    let year_month = &date[..6];
+    let day = &date[6..8];
+    
+    for var in target_vars {
+        let url = format!("{}/{}/{}/{}_1.csv", CFFEX_VOL_RANK_URL, year_month, day, var);
+        println!("📡 请求中金所 {} 持仓排名数据 URL: {}", var, url);
+        
+        let response = client
+            .get(&url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .send()
+            .await;
+        
+        let response = match response {
+            Ok(r) => r,
+            Err(e) => {
+                log::warn!("获取 {} 数据失败: {}", var, e);
+                continue;
+            }
+        };
+        
+        if !response.status().is_success() {
+            log::warn!("获取 {} 数据失败: {}", var, response.status());
+            continue;
+        }
+        
+        // 使用GBK编码读取
+        let bytes = response.bytes().await?;
+        let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+        
+        // 解析CSV数据
+        // CSV格式: 日期,合约,名次,成交量会员,成交量,增减,多单会员,多单,增减,空单会员,空单,增减
+        let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
+        
+        let lines: Vec<&str> = text.lines().collect();
+        
+        for line in lines {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            // 跳过表头行
+            if line.contains("交易日") || line.contains("合约") || line.contains("名次") {
+                continue;
+            }
+            
+            let fields: Vec<&str> = line.split(',').collect();
+            if fields.len() < 12 {
+                continue;
+            }
+            
+            // 字段: 0=日期, 1=合约, 2=名次, 3=成交量会员, 4=成交量, 5=增减, 
+            //       6=多单会员, 7=多单, 8=增减, 9=空单会员, 10=空单, 11=增减
+            let symbol = fields[1].trim().to_string();
+            if symbol.is_empty() {
+                continue;
+            }
+            
+            let rank = fields[2].trim().parse::<i32>().unwrap_or(0);
+            if rank <= 0 {
+                continue;
+            }
+            
+            let variety = extract_variety(&symbol);
+            
+            let data = PositionRankData {
+                rank,
+                vol_party_name: fields[3].trim().to_string(),
+                vol: fields[4].trim().replace(",", "").parse().unwrap_or(0),
+                vol_chg: fields[5].trim().replace(",", "").parse().unwrap_or(0),
+                long_party_name: fields[6].trim().to_string(),
+                long_open_interest: fields[7].trim().replace(",", "").parse().unwrap_or(0),
+                long_open_interest_chg: fields[8].trim().replace(",", "").parse().unwrap_or(0),
+                short_party_name: fields[9].trim().to_string(),
+                short_open_interest: fields[10].trim().replace(",", "").parse().unwrap_or(0),
+                short_open_interest_chg: fields[11].trim().replace(",", "").parse().unwrap_or(0),
+                symbol: symbol.clone(),
+                variety,
+            };
+            
+            symbol_data.entry(symbol).or_insert_with(Vec::new).push(data);
+        }
+        
+        // 转换为响应格式
+        for (symbol, data) in symbol_data {
+            all_results.push(RankTableResponse { symbol, data });
+        }
+    }
+    
+    // 按合约代码排序
+    all_results.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", all_results.len());
+    Ok(all_results)
+}
+
+/// 获取郑州商品交易所前20会员持仓排名数据
+/// 对应 akshare 的 get_rank_table_czce() 函数
+/// 数据来源: https://www.czce.com.cn/cn/jysj/ccpm/H077003004index_1.htm
+/// date: 交易日期，格式 YYYYMMDD，数据从 20151008 开始
+pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
+    use calamine::Reader;
+    
+    let client = Client::new();
+    
+    // 根据日期选择文件格式
+    let year = &date[..4];
+    let url = if date >= "20251102" {
+        format!("{}/{}/{}/FutureDataHolding.xlsx", CZCE_VOL_RANK_URL, year, date)
+    } else {
+        format!("{}/{}/{}/FutureDataHolding.xls", CZCE_VOL_RANK_URL, year, date)
+    };
+    
+    println!("📡 请求郑商所持仓排名数据 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取郑商所持仓排名数据失败: {}", response.status()));
+    }
+
+    let bytes = response.bytes().await?;
+    
+    // 使用calamine解析Excel文件
+    use std::io::Cursor;
+    let cursor = Cursor::new(bytes.as_ref());
+    
+    let mut workbook: calamine::Xlsx<_> = calamine::open_workbook_from_rs(cursor)
+        .map_err(|e| anyhow!("打开Excel文件失败: {}", e))?;
+    
+    // 获取第一个工作表
+    let sheet_names = workbook.sheet_names();
+    if sheet_names.is_empty() {
+        return Err(anyhow!("Excel文件没有工作表"));
+    }
+    let first_sheet = sheet_names[0].clone();
+    
+    let range = workbook.worksheet_range(&first_sheet)
+        .map_err(|e| anyhow!("读取工作表失败: {}", e))?;
+    
+    let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
+    let mut current_symbol = String::new();
+    
+    for row in range.rows() {
+        if row.len() == 0 {
+            continue;
+        }
+        
+        let first_cell = row[0].to_string();
+        
+        // 检查是否是合约标题行（包含品种代码）
+        if first_cell.contains("品种") || first_cell.contains("合约") {
+            // 提取合约代码
+            let re = Regex::new(r"([A-Za-z]+\d+)").unwrap();
+            if let Some(cap) = re.captures(&first_cell) {
+                current_symbol = cap.get(1).map(|m| m.as_str().to_uppercase()).unwrap_or_default();
+            }
+            continue;
+        }
+        
+        // 跳过表头行和合计行
+        if first_cell.contains("名次") || first_cell.contains("合计") || first_cell.is_empty() {
+            continue;
+        }
+        
+        // 解析数据行
+        if row.len() >= 10 && !current_symbol.is_empty() {
+            let rank = row[0].to_string().parse::<i32>().unwrap_or(0);
+            if rank <= 0 {
+                continue;
+            }
+            
+            let variety = extract_variety(&current_symbol);
+            
+            let parse_num = |s: &str| -> i64 {
+                s.replace(",", "").replace("-", "0").trim().parse().unwrap_or(0)
+            };
+            
+            let data = PositionRankData {
+                rank,
+                vol_party_name: row[1].to_string(),
+                vol: parse_num(&row[2].to_string()),
+                vol_chg: parse_num(&row[3].to_string()),
+                long_party_name: row[4].to_string(),
+                long_open_interest: parse_num(&row[5].to_string()),
+                long_open_interest_chg: parse_num(&row[6].to_string()),
+                short_party_name: row[7].to_string(),
+                short_open_interest: parse_num(&row[8].to_string()),
+                short_open_interest_chg: parse_num(&row[9].to_string()),
+                symbol: current_symbol.clone(),
+                variety,
+            };
+            
+            symbol_data.entry(current_symbol.clone()).or_insert_with(Vec::new).push(data);
+        }
+    }
+    
+    // 转换为响应格式
+    let mut result: Vec<RankTableResponse> = symbol_data.into_iter()
+        .map(|(symbol, data)| RankTableResponse { symbol, data })
+        .collect();
+    
+    // 按合约代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", result.len());
+    Ok(result)
+}
+
+/// 获取大连商品交易所前20会员持仓排名数据
+/// 对应 akshare 的 get_dce_rank_table() 函数
+/// 数据来源: http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html
+/// date: 交易日期，格式 YYYYMMDD，数据从 20060104 开始
+/// vars_list: 品种代码列表，如 ["M", "Y"]，为空时返回所有品种
+pub async fn get_dce_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
+    let client = Client::new();
+    
+    let payload = serde_json::json!({
+        "tradeDate": date,
+        "varietyId": "a",
+        "contractId": "a2601",
+        "tradeType": "1",
+        "lang": "zh"
+    });
+    
+    println!("📡 请求大商所持仓排名数据 URL: {}", DCE_VOL_RANK_URL);
+    
+    let response = client
+        .post(DCE_VOL_RANK_URL)
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取大商所持仓排名数据失败: {}", response.status()));
+    }
+
+    let bytes = response.bytes().await?;
+    
+    // 解析ZIP文件
+    use std::io::{Cursor, Read};
+    let cursor = Cursor::new(bytes.as_ref());
+    let mut archive = zip::ZipArchive::new(cursor)
+        .map_err(|e| anyhow!("打开ZIP文件失败: {}", e))?;
+    
+    let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| anyhow!("读取ZIP文件失败: {}", e))?;
+        
+        let file_name = file.name().to_string();
+        
+        // 只处理以日期开头的文件
+        if !file_name.starts_with(date) {
+            continue;
+        }
+        
+        // 提取合约代码（文件名格式: 20230706_m2309_成交量_买持仓_卖持仓排名.txt）
+        let parts: Vec<&str> = file_name.split('_').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        let symbol = parts[1].to_uppercase();
+        let variety = extract_variety(&symbol);
+        
+        // 如果指定了品种列表，检查是否在列表中
+        if let Some(ref vars) = vars_list {
+            if !vars.iter().any(|v| v.eq_ignore_ascii_case(&variety)) {
+                continue;
+            }
+        }
+        
+        // 读取文件内容
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)?;
+        
+        // 尝试不同编码
+        let text = match String::from_utf8(content.clone()) {
+            Ok(s) => s,
+            Err(_) => encoding_rs::GBK.decode(&content).0.to_string(),
+        };
+        
+        // 解析文件内容
+        let lines: Vec<&str> = text.lines().collect();
+        
+        // 找到三个表格的起始位置（成交量、买持仓、卖持仓）
+        let mut vol_start = None;
+        let mut long_start = None;
+        let mut short_start = None;
+        
+        for (i, line) in lines.iter().enumerate() {
+            if line.contains("名次") {
+                if vol_start.is_none() {
+                    vol_start = Some(i);
+                } else if long_start.is_none() {
+                    long_start = Some(i);
+                } else if short_start.is_none() {
+                    short_start = Some(i);
+                }
+            }
+        }
+        
+        if vol_start.is_none() || long_start.is_none() || short_start.is_none() {
+            continue;
+        }
+        
+        // 解析三个表格的数据
+        let vol_data = parse_dce_table_section(&lines, vol_start.unwrap(), long_start.unwrap());
+        let long_data = parse_dce_table_section(&lines, long_start.unwrap(), short_start.unwrap());
+        let short_data = parse_dce_table_section(&lines, short_start.unwrap(), lines.len());
+        
+        // 合并数据
+        let max_len = vol_data.len().max(long_data.len()).max(short_data.len());
+        let mut rank_data = Vec::new();
+        
+        for i in 0..max_len {
+            let (vol_name, vol, vol_chg) = vol_data.get(i).cloned().unwrap_or_default();
+            let (long_name, long_oi, long_chg) = long_data.get(i).cloned().unwrap_or_default();
+            let (short_name, short_oi, short_chg) = short_data.get(i).cloned().unwrap_or_default();
+            
+            rank_data.push(PositionRankData {
+                rank: (i + 1) as i32,
+                vol_party_name: vol_name,
+                vol,
+                vol_chg,
+                long_party_name: long_name,
+                long_open_interest: long_oi,
+                long_open_interest_chg: long_chg,
+                short_party_name: short_name,
+                short_open_interest: short_oi,
+                short_open_interest_chg: short_chg,
+                symbol: symbol.clone(),
+                variety: variety.clone(),
+            });
+        }
+        
+        if !rank_data.is_empty() {
+            symbol_data.insert(symbol, rank_data);
+        }
+    }
+    
+    // 转换为响应格式
+    let mut result: Vec<RankTableResponse> = symbol_data.into_iter()
+        .map(|(symbol, data)| RankTableResponse { symbol, data })
+        .collect();
+    
+    // 按合约代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", result.len());
+    Ok(result)
+}
+
+/// 解析大商所表格数据段
+fn parse_dce_table_section(lines: &[&str], start: usize, end: usize) -> Vec<(String, i64, i64)> {
+    let mut result = Vec::new();
+    
+    for i in (start + 1)..end {
+        let line = lines[i].trim();
+        if line.is_empty() || line.contains("总计") || line.contains("合计") {
+            continue;
+        }
+        
+        // 分割字段（可能是制表符或空格分隔）
+        let fields: Vec<&str> = line.split(|c| c == '\t' || c == ' ')
+            .filter(|s| !s.is_empty())
+            .collect();
+        
+        if fields.len() >= 4 {
+            let name = fields[1].trim().to_string();
+            let value: i64 = fields[2].trim().replace(",", "").parse().unwrap_or(0);
+            let change: i64 = fields[3].trim().replace(",", "").parse().unwrap_or(0);
+            
+            result.push((name, value, change));
+        }
+    }
+    
+    result
+}
+
+
 // ==================== 测试模块 ====================
 
 #[cfg(test)]
@@ -3477,6 +3994,102 @@ mod tests {
             }
             Err(e) => {
                 println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    // ==================== 持仓排名表测试 ====================
+
+    /// 测试获取上期所持仓排名表
+    #[tokio::test]
+    async fn test_get_shfe_rank_table() {
+        println!("\n========== 测试获取上期所持仓排名表 ==========");
+        
+        match get_shfe_rank_table("20250107", Some(vec!["CU", "AL"])).await {
+            Ok(data) => {
+                println!("✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n  合约: {}", item.symbol);
+                    println!("  {:<6} {:<12} {:>10} {:>10} {:<12} {:>10} {:>10}", 
+                        "名次", "成交量会员", "成交量", "增减", "多单会员", "多单", "增减");
+                    for row in item.data.iter().take(5) {
+                        println!("  {:<6} {:<12} {:>10} {:>10} {:<12} {:>10} {:>10}", 
+                            row.rank, row.vol_party_name, row.vol, row.vol_chg,
+                            row.long_party_name, row.long_open_interest, row.long_open_interest_chg);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取中金所持仓排名表
+    #[tokio::test]
+    async fn test_get_cffex_rank_table() {
+        println!("\n========== 测试获取中金所持仓排名表 ==========");
+        
+        match get_cffex_rank_table("20250107", Some(vec!["IF", "IC"])).await {
+            Ok(data) => {
+                println!("✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n  合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("    {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取郑商所持仓排名表
+    #[tokio::test]
+    async fn test_get_rank_table_czce() {
+        println!("\n========== 测试获取郑商所持仓排名表 ==========");
+        
+        match get_rank_table_czce("20250107").await {
+            Ok(data) => {
+                println!("✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n  合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("    {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取大商所持仓排名表
+    #[tokio::test]
+    async fn test_get_dce_rank_table() {
+        println!("\n========== 测试获取大商所持仓排名表 ==========");
+        
+        match get_dce_rank_table("20250107", Some(vec!["M", "Y"])).await {
+            Ok(data) => {
+                println!("✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n  合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("    {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
             }
         }
     }
