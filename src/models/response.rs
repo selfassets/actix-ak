@@ -1,4 +1,11 @@
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
+
+// 获取北京时间
+fn get_beijing_time() -> chrono::DateTime<chrono_tz::Tz> {
+    Utc::now().with_timezone(&Shanghai)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
@@ -14,7 +21,7 @@ impl<T> ApiResponse<T> {
             success: true,
             data: Some(data),
             message: "Success".to_string(),
-            timestamp: chrono::Utc::now().to_rfc3339(),
+            timestamp: get_beijing_time().to_rfc3339(),
         }
     }
 
@@ -23,7 +30,7 @@ impl<T> ApiResponse<T> {
             success: false,
             data: None,
             message,
-            timestamp: chrono::Utc::now().to_rfc3339(),
+            timestamp: get_beijing_time().to_rfc3339(),
         }
     }
 }

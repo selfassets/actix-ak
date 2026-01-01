@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StockInfo {
@@ -10,7 +9,7 @@ pub struct StockInfo {
     pub change_percent: f64,
     pub volume: u64,
     pub market_cap: Option<f64>,
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

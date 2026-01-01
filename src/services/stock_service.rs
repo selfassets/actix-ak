@@ -1,10 +1,17 @@
 use anyhow::Result;
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use crate::models::{StockInfo, StockHistoryData, StockQuery};
+
+// 获取北京时间
+fn get_beijing_time() -> chrono::DateTime<Utc> {
+    Utc::now().with_timezone(&Shanghai).with_timezone(&Utc)
+}
 
 // 模拟股票数据服务 - 在实际应用中，这里会连接到真实的数据源
 pub async fn get_stock_info(symbol: &str) -> Result<StockInfo> {
     // 模拟数据 - 实际应用中会从数据源获取
+    let beijing_time = get_beijing_time();
     let stock_info = StockInfo {
         symbol: symbol.to_uppercase(),
         name: format!("{} Company", symbol.to_uppercase()),
@@ -13,7 +20,7 @@ pub async fn get_stock_info(symbol: &str) -> Result<StockInfo> {
         change_percent: 1.58,
         volume: 1_234_567,
         market_cap: Some(50_000_000_000.0),
-        updated_at: Utc::now(),
+        updated_at: beijing_time.to_rfc3339(),
     };
     
     Ok(stock_info)
@@ -49,6 +56,7 @@ pub async fn list_stocks(query: &StockQuery) -> Result<Vec<StockInfo>> {
     let mut stocks = Vec::new();
     
     let limit = query.limit.unwrap_or(symbols.len());
+    let beijing_time = Utc::now().with_timezone(&Shanghai);
     
     for (i, symbol) in symbols.iter().take(limit).enumerate() {
         stocks.push(StockInfo {
@@ -59,7 +67,7 @@ pub async fn list_stocks(query: &StockQuery) -> Result<Vec<StockInfo>> {
             change_percent: (i as f64 - 2.0) * 0.8,
             volume: 1_000_000 + (i as u64 * 500_000),
             market_cap: Some(10_000_000_000.0 + (i as f64 * 20_000_000_000.0)),
-            updated_at: Utc::now(),
+            updated_at: beijing_time.to_rfc3339(),
         });
     }
     
@@ -89,6 +97,7 @@ async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
         // Ok(convert_to_stock_info(data))
         
         // 临时返回模拟数据
+        let beijing_time = get_beijing_time();
         Ok(StockInfo {
             symbol: symbol.to_uppercase(),
             name: format!("{} Company", symbol.to_uppercase()),
@@ -97,7 +106,7 @@ async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
             change_percent: 1.58,
             volume: 1_234_567,
             market_cap: Some(50_000_000_000.0),
-            updated_at: Utc::now(),
+            updated_at: beijing_time.to_rfc3339(),
         })
     } else {
         Err(anyhow::anyhow!("Failed to fetch stock data: {}", response.status()))

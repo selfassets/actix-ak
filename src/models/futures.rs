@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FuturesInfo {
@@ -15,7 +14,7 @@ pub struct FuturesInfo {
     pub settlement: Option<f64>,
     pub prev_settlement: Option<f64>,
     pub open_interest: Option<u64>,
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

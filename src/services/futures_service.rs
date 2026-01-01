@@ -1,9 +1,17 @@
 use anyhow::{Result, anyhow};
 use chrono::Utc;
+use chrono_tz::Asia::Shanghai;
 use reqwest::Client;
+use regex::Regex;
 use crate::models::{FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange};
 
-const SINA_FUTURES_API: &str = "https://hq.sinajs.cn/list=";
+// 获取北京时间
+fn get_beijing_time() -> chrono::DateTime<Utc> {
+    Utc::now().with_timezone(&Shanghai).with_timezone(&Utc)
+}
+
+const SINA_FUTURES_REALTIME_API: &str = "https://hq.sinajs.cn";
+const SINA_FUTURES_LIST_API: &str = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQFuturesData";
 
 pub struct FuturesService {
     client: Client,
@@ -18,13 +26,21 @@ impl FuturesService {
 
     // 获取期货实时数据
     pub async fn get_futures_info(&self, symbol: &str) -> Result<FuturesInfo> {
-        let formatted_symbol = self.format_symbol(symbol);
-        let url = format!("{}{}", SINA_FUTURES_API, formatted_symbol);
+        let formatted_symbol = self.format_symbol_for_realtime(symbol);
+        let rn_code = self.generate_random_code();
+        let url = format!("{}?rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, formatted_symbol);
         
         let response = self.client
             .get(&url)
-            .header("Referer", "https://finance.sina.com.cn/")
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .header("Accept", "*/*")
+            .header("Accept-Encoding", "gzip, deflate")
+            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+            .header("Cache-Control", "no-cache")
+            .header("Host", "hq.sinajs.cn")
+            .header("Pragma", "no-cache")
+            .header("Proxy-Connection", "keep-alive")
+            .header("Referer", "https://vip.stock.finance.sina.com.cn/")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
             .send()
             .await?;
 
@@ -33,22 +49,30 @@ impl FuturesService {
         }
 
         let text = response.text().await?;
-        self.parse_sina_futures_data(&text, symbol)
+        self.parse_sina_realtime_data(&text, symbol)
     }
 
     // 获取多个期货合约数据
     pub async fn get_multiple_futures(&self, symbols: &[String]) -> Result<Vec<FuturesInfo>> {
         let formatted_symbols: Vec<String> = symbols.iter()
-            .map(|s| self.format_symbol(s))
+            .map(|s| self.format_symbol_for_realtime(s))
             .collect();
         
         let symbols_str = formatted_symbols.join(",");
-        let url = format!("{}{}", SINA_FUTURES_API, symbols_str);
+        let rn_code = self.generate_random_code();
+        let url = format!("{}?rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, symbols_str);
         
         let response = self.client
             .get(&url)
-            .header("Referer", "https://finance.sina.com.cn/")
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .header("Accept", "*/*")
+            .header("Accept-Encoding", "gzip, deflate")
+            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+            .header("Cache-Control", "no-cache")
+            .header("Host", "hq.sinajs.cn")
+            .header("Pragma", "no-cache")
+            .header("Proxy-Connection", "keep-alive")
+            .header("Referer", "https://vip.stock.finance.sina.com.cn/")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
             .send()
             .await?;
 
@@ -57,16 +81,67 @@ impl FuturesService {
         }
 
         let text = response.text().await?;
-        self.parse_multiple_sina_futures_data(&text, symbols)
+        self.parse_multiple_realtime_data(&text, symbols)
     }
 
-    // 获取期货列表（主要合约）
+    // 获取期货列表（通过新浪API获取品种数据）
     pub async fn list_main_futures(&self, query: &FuturesQuery) -> Result<Vec<FuturesInfo>> {
-        let main_contracts = self.get_main_contracts(query.exchange.as_deref());
-        let limit = query.limit.unwrap_or(main_contracts.len());
-        let symbols: Vec<String> = main_contracts.into_iter().take(limit).collect();
-        
-        self.get_multiple_futures(&symbols).await
+        match query.exchange.as_deref() {
+            Some(exchange) => {
+                let node = self.get_exchange_node(exchange);
+                self.get_futures_by_node(&node, query.limit).await
+            }
+            None => {
+                // 获取所有交易所的主力合约
+                let mut all_futures = Vec::new();
+                let exchanges = vec!["DCE", "CZCE", "SHFE", "CFFEX"];
+                
+                for exchange in exchanges {
+                    let node = self.get_exchange_node(exchange);
+                    match self.get_futures_by_node(&node, Some(5)).await {
+                        Ok(mut futures) => all_futures.append(&mut futures),
+                        Err(e) => log::warn!("Failed to get futures for {}: {}", exchange, e),
+                    }
+                }
+                
+                let limit = query.limit.unwrap_or(all_futures.len());
+                all_futures.truncate(limit);
+                Ok(all_futures)
+            }
+        }
+    }
+
+    // 通过新浪API获取指定品种的期货数据
+    async fn get_futures_by_node(&self, node: &str, limit: Option<usize>) -> Result<Vec<FuturesInfo>> {
+        let response = self.client
+            .get(SINA_FUTURES_LIST_API)
+            .query(&[
+                ("page", "1"),
+                ("sort", "position"),
+                ("asc", "0"),
+                ("node", node),
+                ("base", "futures"),
+            ])
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow!("Failed to fetch futures list: {}", response.status()));
+        }
+
+        let json_data: serde_json::Value = response.json().await?;
+        let mut futures_list = Vec::new();
+
+        if let Some(data_array) = json_data.as_array() {
+            let limit = limit.unwrap_or(data_array.len());
+            for item in data_array.iter().take(limit) {
+                if let Ok(futures_info) = self.parse_sina_list_data(item) {
+                    futures_list.push(futures_info);
+                }
+            }
+        }
+
+        Ok(futures_list)
     }
 
     // 获取支持的交易所列表
@@ -100,8 +175,18 @@ impl FuturesService {
         ]
     }
 
-    // 格式化期货合约代码为新浪格式
-    fn format_symbol(&self, symbol: &str) -> String {
+    // 生成随机数（模拟新浪的rn参数）
+    fn generate_random_code(&self) -> String {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        format!("{:x}", timestamp % 0x7FFFFFFF)
+    }
+
+    // 格式化期货合约代码为新浪实时数据格式
+    fn format_symbol_for_realtime(&self, symbol: &str) -> String {
         let symbol_upper = symbol.to_uppercase();
         
         // 如果已经是新浪格式，直接返回
@@ -110,44 +195,23 @@ impl FuturesService {
         }
         
         // 根据合约代码判断交易所并添加前缀
-        if self.is_dce_symbol(&symbol_upper) {
-            format!("NF_{}", symbol_upper)
-        } else if self.is_czce_symbol(&symbol_upper) {
-            format!("NF_{}", symbol_upper)
-        } else if self.is_shfe_symbol(&symbol_upper) {
-            format!("NF_{}", symbol_upper)
-        } else if self.is_ine_symbol(&symbol_upper) {
-            format!("NF_{}", symbol_upper)
-        } else if self.is_cffex_symbol(&symbol_upper) {
+        if self.is_cffex_symbol(&symbol_upper) {
             format!("CFF_{}", symbol_upper)
         } else {
-            // 默认使用NF前缀
             format!("NF_{}", symbol_upper)
         }
     }
 
-    // 判断是否为大商所合约
-    fn is_dce_symbol(&self, symbol: &str) -> bool {
-        let dce_products = ["A", "B", "C", "CS", "M", "Y", "P", "FB", "BB", "JD", "L", "V", "PP", "J", "JM", "I", "EG", "EB", "PG", "LH", "RR"];
-        dce_products.iter().any(|&product| symbol.starts_with(product))
-    }
-
-    // 判断是否为郑商所合约
-    fn is_czce_symbol(&self, symbol: &str) -> bool {
-        let czce_products = ["WH", "PM", "CF", "SR", "TA", "OI", "RI", "RS", "RM", "JR", "LR", "AP", "CJ", "UR", "SA", "FG", "MA", "ZC", "SF", "SM", "PF"];
-        czce_products.iter().any(|&product| symbol.starts_with(product))
-    }
-
-    // 判断是否为上期所合约
-    fn is_shfe_symbol(&self, symbol: &str) -> bool {
-        let shfe_products = ["CU", "AL", "ZN", "PB", "NI", "SN", "AU", "AG", "RB", "WR", "HC", "FU", "BU", "RU", "SP", "SS"];
-        shfe_products.iter().any(|&product| symbol.starts_with(product))
-    }
-
-    // 判断是否为能源中心合约
-    fn is_ine_symbol(&self, symbol: &str) -> bool {
-        let ine_products = ["SC", "NR", "LU", "BC"];
-        ine_products.iter().any(|&product| symbol.starts_with(product))
+    // 获取交易所对应的node参数
+    fn get_exchange_node(&self, exchange: &str) -> String {
+        match exchange.to_uppercase().as_str() {
+            "DCE" => "dce_qh".to_string(),
+            "CZCE" => "czce_qh".to_string(), 
+            "SHFE" => "shfe_qh".to_string(),
+            "CFFEX" => "cffex_qh".to_string(),
+            "INE" => "ine_qh".to_string(),
+            _ => "dce_qh".to_string(), // 默认大商所
+        }
     }
 
     // 判断是否为中金所合约
@@ -156,69 +220,38 @@ impl FuturesService {
         cffex_products.iter().any(|&product| symbol.starts_with(product))
     }
 
-    // 获取主力合约列表
-    fn get_main_contracts(&self, exchange: Option<&str>) -> Vec<String> {
-        let mut contracts = Vec::new();
-        
-        match exchange {
-            Some("DCE") => {
-                contracts.extend(vec!["A2405", "M2405", "Y2405", "C2405", "CS2405", "P2405", "L2405", "V2405", "PP2405", "J2405", "JM2405", "I2405"]);
-            },
-            Some("CZCE") => {
-                contracts.extend(vec!["WH405", "CF405", "SR405", "TA405", "OI405", "RM405", "MA405", "ZC405", "FG405", "AP405"]);
-            },
-            Some("SHFE") => {
-                contracts.extend(vec!["CU2405", "AL2405", "ZN2405", "PB2405", "NI2405", "AU2406", "AG2406", "RB2405", "HC2405", "RU2405"]);
-            },
-            Some("INE") => {
-                contracts.extend(vec!["SC2405", "NR2405", "LU2405"]);
-            },
-            Some("CFFEX") => {
-                contracts.extend(vec!["IF2404", "IC2404", "IH2404", "T2406", "TF2406"]);
-            },
-            _ => {
-                // 返回所有主力合约
-                contracts.extend(vec![
-                    "A2405", "M2405", "Y2405", "C2405", "L2405", "V2405", "PP2405", "J2405", "JM2405", "I2405",
-                    "WH405", "CF405", "SR405", "TA405", "OI405", "RM405", "MA405", "ZC405", "FG405",
-                    "CU2405", "AL2405", "ZN2405", "PB2405", "NI2405", "AU2406", "AG2406", "RB2405", "HC2405", "RU2405",
-                    "SC2405", "NR2405", "LU2405",
-                    "IF2404", "IC2404", "IH2404", "T2406", "TF2406"
-                ]);
-            }
-        }
-        
-        contracts.into_iter().map(|s| s.to_string()).collect()
-    }
-
-    // 解析新浪期货数据
-    fn parse_sina_futures_data(&self, data: &str, original_symbol: &str) -> Result<FuturesInfo> {
-        // 新浪期货数据格式: var hq_str_NF_CU2405="铜2405,62970,62830,63200,63200,62830,62970,62980,446224,28089671840,62970,1,62960,2,62950,1,62980,1,62990,1,63000,1,63010,1,2024-03-15,15:00:00,00";
-        
-        if !data.contains("=") {
-            return Err(anyhow!("Invalid data format"));
+    // 解析新浪期货实时数据
+    // 数据格式: var hq_str_nf_CU2405="铜2405,62970,62830,63200,63200,62830,62970,62980,446224,28089671840,62970,1,62960,2,62950,1,62980,1,62990,1,63000,1,63010,1,2024-03-15,15:00:00,00";
+    // 字段说明: [0]名称,[1]昨结算,[2]开盘,[3]最高,[4]最低,[5]昨收,[6]买价,[7]卖价,[8]最新价,[9]结算价,[10]昨结算,[11]买量,[12]卖量,[13]持仓,[14]成交量
+    fn parse_sina_realtime_data(&self, data: &str, original_symbol: &str) -> Result<FuturesInfo> {
+        // 检查数据是否为空
+        if data.trim().is_empty() || data.contains("\"\"") {
+            return Err(anyhow!("Empty data returned from API"));
         }
 
-        let parts: Vec<&str> = data.split('=').collect();
-        if parts.len() < 2 {
-            return Err(anyhow!("Invalid data format"));
-        }
-
-        let data_part = parts[1].trim_matches('"').trim_matches(';');
+        let re = Regex::new(r#"var hq_str_[^=]+=["']([^"']+)["']"#).unwrap();
+        let caps = re.captures(data)
+            .ok_or_else(|| anyhow!("Invalid data format: no match found in: {}", data))?;
+        
+        let data_part = caps.get(1)
+            .ok_or_else(|| anyhow!("Invalid data format: no data part"))?
+            .as_str();
+        
         let fields: Vec<&str> = data_part.split(',').collect();
         
-        if fields.len() < 20 {
-            return Err(anyhow!("Insufficient data fields"));
+        if fields.len() < 15 {
+            return Err(anyhow!("Insufficient data fields: got {}, expected at least 15. Data: {}", fields.len(), data_part));
         }
 
-        let current_price = fields[1].parse::<f64>().unwrap_or(0.0);
-        let prev_settlement = fields[2].parse::<f64>().unwrap_or(0.0);
-        let open = fields[3].parse::<f64>().unwrap_or(0.0);
-        let high = fields[4].parse::<f64>().unwrap_or(0.0);
-        let low = fields[5].parse::<f64>().unwrap_or(0.0);
-        let settlement = fields[6].parse::<f64>().ok();
-        let volume = fields[7].parse::<u64>().unwrap_or(0);
-        let open_interest = fields[8].parse::<u64>().ok();
+        let name = fields[0].to_string();
+        let open = fields[2].parse::<f64>().unwrap_or(0.0);
+        let high = fields[3].parse::<f64>().unwrap_or(0.0);
+        let low = fields[4].parse::<f64>().unwrap_or(0.0);
+        let current_price = fields[8].parse::<f64>().unwrap_or(0.0);
+        let settlement = fields[9].parse::<f64>().ok();
+        let prev_settlement = fields[10].parse::<f64>().unwrap_or(0.0);
+        let open_interest = fields[13].parse::<u64>().ok();
+        let volume = fields[14].parse::<u64>().unwrap_or(0);
 
         let change = current_price - prev_settlement;
         let change_percent = if prev_settlement != 0.0 {
@@ -227,9 +260,11 @@ impl FuturesService {
             0.0
         };
 
+        let beijing_time = get_beijing_time();
+
         Ok(FuturesInfo {
             symbol: original_symbol.to_string(),
-            name: fields[0].to_string(),
+            name,
             current_price,
             change,
             change_percent,
@@ -240,18 +275,18 @@ impl FuturesService {
             settlement,
             prev_settlement: Some(prev_settlement),
             open_interest,
-            updated_at: Utc::now(),
+            updated_at: beijing_time.to_rfc3339(),
         })
     }
 
-    // 解析多个期货合约数据
-    fn parse_multiple_sina_futures_data(&self, data: &str, original_symbols: &[String]) -> Result<Vec<FuturesInfo>> {
+    // 解析多个期货合约实时数据
+    fn parse_multiple_realtime_data(&self, data: &str, original_symbols: &[String]) -> Result<Vec<FuturesInfo>> {
         let mut results = Vec::new();
         let lines: Vec<&str> = data.lines().collect();
         
         for (i, line) in lines.iter().enumerate() {
-            if i < original_symbols.len() {
-                match self.parse_sina_futures_data(line, &original_symbols[i]) {
+            if i < original_symbols.len() && !line.trim().is_empty() {
+                match self.parse_sina_realtime_data(line, &original_symbols[i]) {
                     Ok(futures_info) => results.push(futures_info),
                     Err(e) => {
                         log::warn!("Failed to parse data for {}: {}", original_symbols[i], e);
@@ -262,6 +297,45 @@ impl FuturesService {
         }
         
         Ok(results)
+    }
+
+    // 解析新浪期货列表数据
+    fn parse_sina_list_data(&self, item: &serde_json::Value) -> Result<FuturesInfo> {
+        let symbol = item["symbol"].as_str().unwrap_or("").to_string();
+        let name = item["name"].as_str().unwrap_or("").to_string();
+        let current_price = item["trade"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+        let prev_settlement = item["presettlement"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+        let open = item["open"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+        let high = item["high"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+        let low = item["low"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0);
+        let volume = item["volume"].as_str().unwrap_or("0").parse::<u64>().unwrap_or(0);
+        let open_interest = item["position"].as_str().unwrap_or("0").parse::<u64>().ok();
+        let settlement = item["settlement"].as_str().unwrap_or("0").parse::<f64>().ok();
+
+        let change = current_price - prev_settlement;
+        let change_percent = if prev_settlement != 0.0 {
+            (change / prev_settlement) * 100.0
+        } else {
+            0.0
+        };
+
+        let beijing_time = get_beijing_time();
+
+        Ok(FuturesInfo {
+            symbol,
+            name,
+            current_price,
+            change,
+            change_percent,
+            volume,
+            open,
+            high,
+            low,
+            settlement,
+            prev_settlement: Some(prev_settlement),
+            open_interest,
+            updated_at: beijing_time.to_rfc3339(),
+        })
     }
 }
 
