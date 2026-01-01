@@ -132,3 +132,45 @@ pub struct FuturesMainQuery {
     pub start_date: Option<String>,  // 开始日期 YYYYMMDD
     pub end_date: Option<String>,    // 结束日期 YYYYMMDD
 }
+
+/// 外盘期货历史数据
+/// 对应 akshare 的 futures_foreign_hist() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ForeignFuturesHistData {
+    pub date: String,           // 日期
+    pub open: f64,              // 开盘价
+    pub high: f64,              // 最高价
+    pub low: f64,               // 最低价
+    pub close: f64,             // 收盘价
+    pub volume: u64,            // 成交量
+}
+
+/// 外盘期货合约详情
+/// 对应 akshare 的 futures_foreign_detail() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ForeignFuturesDetail {
+    pub items: Vec<ForeignFuturesDetailItem>,  // 合约详情项列表
+}
+
+/// 外盘期货合约详情项
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ForeignFuturesDetailItem {
+    pub name: String,           // 项目名称
+    pub value: String,          // 项目值
+}
+
+/// 期货交易费用信息
+/// 对应 akshare 的 futures_fees_info() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesFeesInfo {
+    pub exchange: String,              // 交易所
+    pub product: String,               // 品种
+    pub contract: String,              // 合约
+    pub contract_size: String,         // 合约乘数
+    pub price_tick: String,            // 最小变动价位
+    pub margin_rate: String,           // 保证金率
+    pub open_fee: String,              // 开仓手续费
+    pub close_fee: String,             // 平仓手续费
+    pub close_today_fee: String,       // 平今手续费
+    pub updated_at: String,            // 更新时间
+}

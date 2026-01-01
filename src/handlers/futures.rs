@@ -3,12 +3,14 @@ use crate::models::{
     ApiResponse, FuturesInfo, FuturesHistoryData, FuturesQuery,
     FuturesSymbolMark, FuturesContractDetail,
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
-    FuturesHoldPosQuery, FuturesMainQuery
+    FuturesHoldPosQuery, FuturesMainQuery,
+    ForeignFuturesHistData, ForeignFuturesDetail
 };
 use crate::services::futures_service::{
     FuturesService, get_futures_history, get_futures_minute_data,
     get_foreign_futures_symbols, get_foreign_futures_realtime,
-    get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina
+    get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina,
+    get_futures_foreign_hist, get_futures_foreign_detail
 };
 
 /// 获取单个期货合约实时数据
@@ -305,6 +307,42 @@ pub async fn get_hold_pos(query: web::Query<FuturesHoldPosQuery>) -> Result<Http
     }
 }
 
+/// 获取外盘期货历史数据（日K线）
+/// GET /futures/foreign/{symbol}/history
+/// 对应 akshare 的 futures_foreign_hist()
+pub async fn get_foreign_history(path: web::Path<String>) -> Result<HttpResponse> {
+    let symbol = path.into_inner();
+    
+    match get_futures_foreign_hist(&symbol).await {
+        Ok(data) => {
+            let response = ApiResponse::success(data);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<Vec<ForeignFuturesHistData>>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
+/// 获取外盘期货合约详情
+/// GET /futures/foreign/{symbol}/detail
+/// 对应 akshare 的 futures_foreign_detail()
+pub async fn get_foreign_detail(path: web::Path<String>) -> Result<HttpResponse> {
+    let symbol = path.into_inner();
+    
+    match get_futures_foreign_detail(&symbol).await {
+        Ok(detail) => {
+            let response = ApiResponse::success(detail);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<ForeignFuturesDetail>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
 /// 配置期货相关路由
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -315,15 +353,17 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/symbols", web::get().to(get_symbol_mark))
             .route("/symbols/{exchange}", web::get().to(get_exchange_symbols))
             .route("/batch", web::post().to(get_multiple_futures))
-            // 主力连续合约（新增）
+            // 主力连续合约
             .route("/main/display", web::get().to(get_display_main_contracts))
             .route("/main/{symbol}/daily", web::get().to(get_main_daily))
             .route("/main/{exchange}", web::get().to(get_main_contracts))
-            // 持仓排名（新增）
+            // 持仓排名
             .route("/hold_pos", web::get().to(get_hold_pos))
             // 外盘期货
             .route("/foreign/symbols", web::get().to(get_foreign_symbols))
             .route("/foreign/realtime", web::post().to(get_foreign_realtime))
+            .route("/foreign/{symbol}/history", web::get().to(get_foreign_history))
+            .route("/foreign/{symbol}/detail", web::get().to(get_foreign_detail))
             // 品种实时数据
             .route("/realtime/{symbol}", web::get().to(get_realtime_by_symbol))
             // 单个合约

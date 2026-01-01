@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use crate::models::{
     FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange,
     FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol,
-    FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition
+    FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
+    ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -939,6 +940,192 @@ fn parse_foreign_futures_data(data: &str, codes: &[String]) -> Result<Vec<Future
     Ok(results)
 }
 
+/// 外盘期货日K线API
+const SINA_FOREIGN_DAILY_API: &str = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php";
+
+/// 获取外盘期货历史数据（日K线）
+/// 对应 akshare 的 futures_foreign_hist() 函数
+/// symbol: 外盘期货代码，如 "ZSD"(LME锌), "GC"(COMEX黄金)
+pub async fn get_futures_foreign_hist(symbol: &str) -> Result<Vec<ForeignFuturesHistData>> {
+    let client = Client::new();
+    
+    // 构建日期参数
+    let now = Utc::now().with_timezone(&Shanghai);
+    let today = format!("{}_{}_{}",
+        now.format("%Y"),
+        now.format("%-m"),
+        now.format("%-d")
+    );
+    
+    let url = format!(
+        "{}/var%20_S{}=/GlobalFuturesService.getGlobalFuturesDailyKLine",
+        SINA_FOREIGN_DAILY_API, today
+    );
+    
+    println!("📡 请求外盘期货历史数据 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .query(&[
+            ("symbol", symbol),
+            ("_", &today),
+            ("source", "web"),
+        ])
+        .header("Referer", "https://finance.sina.com.cn/")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取外盘期货历史数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    println!("📥 原始响应数据长度: {} 字节", text.len());
+    
+    parse_foreign_hist_data(&text)
+}
+
+/// 解析外盘期货历史数据
+fn parse_foreign_hist_data(data: &str) -> Result<Vec<ForeignFuturesHistData>> {
+    let mut history = Vec::new();
+    
+    // 找到JSON数组的位置
+    let start = data.find('[');
+    let end = data.rfind(']');
+    
+    if start.is_none() || end.is_none() {
+        return Err(anyhow!("无效的外盘期货历史数据格式"));
+    }
+    
+    let json_str = &data[start.unwrap()..end.unwrap() + 1];
+    
+    let json_data: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| anyhow!("解析JSON失败: {}", e))?;
+    
+    if let Some(arr) = json_data.as_array() {
+        println!("📈 解析到 {} 条外盘期货历史数据", arr.len());
+        
+        for item in arr {
+            if item.is_object() {
+                // 新浪返回的字段: date, open, high, low, close, volume
+                history.push(ForeignFuturesHistData {
+                    date: item["date"].as_str().unwrap_or("").to_string(),
+                    open: item["open"].as_str()
+                        .or_else(|| item["open"].as_f64().map(|_| ""))
+                        .and_then(|s| if s.is_empty() { item["open"].as_f64() } else { s.parse().ok() })
+                        .unwrap_or(0.0),
+                    high: item["high"].as_str()
+                        .or_else(|| item["high"].as_f64().map(|_| ""))
+                        .and_then(|s| if s.is_empty() { item["high"].as_f64() } else { s.parse().ok() })
+                        .unwrap_or(0.0),
+                    low: item["low"].as_str()
+                        .or_else(|| item["low"].as_f64().map(|_| ""))
+                        .and_then(|s| if s.is_empty() { item["low"].as_f64() } else { s.parse().ok() })
+                        .unwrap_or(0.0),
+                    close: item["close"].as_str()
+                        .or_else(|| item["close"].as_f64().map(|_| ""))
+                        .and_then(|s| if s.is_empty() { item["close"].as_f64() } else { s.parse().ok() })
+                        .unwrap_or(0.0),
+                    volume: item["volume"].as_str()
+                        .and_then(|s| s.parse().ok())
+                        .or_else(|| item["volume"].as_u64())
+                        .unwrap_or(0),
+                });
+            }
+        }
+    }
+    
+    Ok(history)
+}
+
+/// 获取外盘期货合约详情
+/// 对应 akshare 的 futures_foreign_detail() 函数
+/// symbol: 外盘期货代码，如 "ZSD"(LME锌), "GC"(COMEX黄金)
+pub async fn get_futures_foreign_detail(symbol: &str) -> Result<ForeignFuturesDetail> {
+    let client = Client::new();
+    
+    let url = format!("https://finance.sina.com.cn/futures/quotes/{}.shtml", symbol);
+    println!("📡 请求外盘期货合约详情 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取外盘期货合约详情失败: {}", response.status()));
+    }
+
+    // 使用 GBK 编码读取
+    let bytes = response.bytes().await?;
+    let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+    
+    parse_foreign_detail_html(&text)
+}
+
+/// 解析外盘期货合约详情HTML
+fn parse_foreign_detail_html(html: &str) -> Result<ForeignFuturesDetail> {
+    let mut items = Vec::new();
+    
+    // 查找第7个表格（索引6），这是合约详情表格
+    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
+    let tables: Vec<_> = table_re.captures_iter(html).collect();
+    
+    // 尝试找到合约详情表格（通常是第7个表格）
+    let target_table_index = if tables.len() > 6 { 6 } else { tables.len().saturating_sub(1) };
+    
+    if tables.is_empty() {
+        return Err(anyhow!("未找到合约详情表格"));
+    }
+    
+    let table_content = tables.get(target_table_index)
+        .and_then(|cap| cap.get(1))
+        .map(|m| m.as_str())
+        .unwrap_or("");
+    
+    // 解析表格行
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
+    
+    // 清理HTML标签的辅助函数
+    let clean_html = |s: &str| -> String {
+        let tag_re = Regex::new(r"<[^>]+>").unwrap();
+        tag_re.replace_all(s, "").trim().to_string()
+    };
+    
+    for row_cap in row_re.captures_iter(table_content) {
+        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        let cells: Vec<_> = cell_re.captures_iter(row_content)
+            .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+            .collect();
+        
+        // 处理两列的行（名称-值对）
+        if cells.len() >= 2 {
+            let name = cells[0].clone();
+            let value = cells[1].clone();
+            
+            if !name.is_empty() && !value.is_empty() {
+                items.push(ForeignFuturesDetailItem { name, value });
+            }
+            
+            // 如果有4列，处理第二对
+            if cells.len() >= 4 {
+                let name2 = cells[2].clone();
+                let value2 = cells[3].clone();
+                
+                if !name2.is_empty() && !value2.is_empty() {
+                    items.push(ForeignFuturesDetailItem { name: name2, value: value2 });
+                }
+            }
+        }
+    }
+    
+    println!("📊 解析到 {} 条合约详情项", items.len());
+    Ok(ForeignFuturesDetail { items })
+}
+
 
 // ==================== 主力连续合约相关 ====================
 
@@ -1775,5 +1962,94 @@ mod tests {
             }
         }
         println!("✅ 解析测试完成！");
+    }
+
+    // ==================== 外盘期货历史数据测试 ====================
+
+    /// 测试获取外盘期货历史数据
+    #[tokio::test]
+    async fn test_futures_foreign_hist() {
+        println!("\n========== 测试获取外盘期货历史数据 ==========");
+        
+        // 测试LME锌
+        println!("\n  1. 测试LME锌3个月(ZSD):");
+        match get_futures_foreign_hist("ZSD").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("  {:<12} {:>10} {:>10} {:>10} {:>10} {:>12}", 
+                    "日期", "开盘", "最高", "最低", "收盘", "成交量");
+                for d in data.iter().rev().take(10) {
+                    println!("  {:<12} {:>10.2} {:>10.2} {:>10.2} {:>10.2} {:>12}", 
+                        d.date, d.open, d.high, d.low, d.close, d.volume);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试COMEX黄金
+        println!("\n  2. 测试COMEX黄金(GC):");
+        match get_futures_foreign_hist("GC").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in data.iter().rev().take(5) {
+                    println!("    {} - O:{:.2} H:{:.2} L:{:.2} C:{:.2}", 
+                        d.date, d.open, d.high, d.low, d.close);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试NYMEX原油
+        println!("\n  3. 测试NYMEX原油(CL):");
+        match get_futures_foreign_hist("CL").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in data.iter().rev().take(5) {
+                    println!("    {} - O:{:.2} H:{:.2} L:{:.2} C:{:.2}", 
+                        d.date, d.open, d.high, d.low, d.close);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取外盘期货合约详情
+    #[tokio::test]
+    async fn test_futures_foreign_detail() {
+        println!("\n========== 测试获取外盘期货合约详情 ==========");
+        
+        // 测试LME锌
+        println!("\n  1. 测试LME锌3个月(ZSD):");
+        match get_futures_foreign_detail("ZSD").await {
+            Ok(detail) => {
+                println!("  ✅ 获取成功！共 {} 条详情项", detail.items.len());
+                for item in &detail.items {
+                    println!("    {}: {}", item.name, item.value);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试COMEX黄金
+        println!("\n  2. 测试COMEX黄金(GC):");
+        match get_futures_foreign_detail("GC").await {
+            Ok(detail) => {
+                println!("  ✅ 获取成功！共 {} 条详情项", detail.items.len());
+                for item in detail.items.iter().take(10) {
+                    println!("    {}: {}", item.name, item.value);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
     }
 }
