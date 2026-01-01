@@ -1229,9 +1229,6 @@ fn parse_fees_html(html: &str) -> Result<Vec<FuturesFeesInfo>> {
     Ok(fees_list)
 }
 
-/// 九期网期货手续费API
-const QIHUO9_COMM_URL: &str = "https://www.9qihuo.com/qihuoshouxufei";
-
 /// 获取期货手续费信息
 /// 对应 akshare 的 futures_comm_info() 函数
 /// 数据来源: https://www.9qihuo.com/qihuoshouxufei
@@ -2012,6 +2009,58 @@ fn parse_basis_string(s: &str) -> (f64, f64) {
     // 没有百分号，尝试直接解析为基差
     let basis = s.parse::<f64>().unwrap_or(0.0);
     (basis, 0.0)
+}
+
+/// 获取期货现货价格日线数据（日期范围）
+/// 对应 akshare 的 futures_spot_price_daily() 函数
+/// 数据来源: https://www.100ppi.com/sf/
+/// start_date: 开始日期，格式 YYYYMMDD
+/// end_date: 结束日期，格式 YYYYMMDD
+/// symbols: 品种代码列表，为空时返回所有品种
+pub async fn get_futures_spot_price_daily(
+    start_date: &str, 
+    end_date: &str, 
+    symbols: Option<Vec<&str>>
+) -> Result<Vec<FuturesSpotPrice>> {
+    use chrono::NaiveDate;
+    
+    // 解析日期
+    let start = NaiveDate::parse_from_str(start_date, "%Y%m%d")
+        .map_err(|e| anyhow!("无效的开始日期格式: {}", e))?;
+    let end = NaiveDate::parse_from_str(end_date, "%Y%m%d")
+        .map_err(|e| anyhow!("无效的结束日期格式: {}", e))?;
+    
+    if start > end {
+        return Err(anyhow!("开始日期不能大于结束日期"));
+    }
+    
+    println!("📡 获取现货价格日线数据: {} 至 {}", start_date, end_date);
+    
+    let mut all_data = Vec::new();
+    let mut current = start;
+    
+    while current <= end {
+        let date_str = current.format("%Y%m%d").to_string();
+        
+        // 获取当天数据
+        match get_futures_spot_price(&date_str, symbols.clone()).await {
+            Ok(data) => {
+                if !data.is_empty() {
+                    all_data.extend(data);
+                }
+            }
+            Err(e) => {
+                // 非交易日或数据缺失，跳过
+                println!("  ⚠️ {} 数据获取失败（可能是非交易日）: {}", date_str, e);
+            }
+        }
+        
+        // 下一天
+        current = current.succ_opt().unwrap_or(current);
+    }
+    
+    println!("📊 共获取 {} 条现货价格日线数据", all_data.len());
+    Ok(all_data)
 }
 
 /// 解析期货手续费HTML
@@ -3389,6 +3438,45 @@ mod tests {
             }
             Err(e) => {
                 println!("  ⚠️ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取现货价格日线数据（日期范围）
+    #[tokio::test]
+    async fn test_futures_spot_price_daily() {
+        println!("\n========== 测试获取现货价格日线数据 ==========");
+        
+        // 测试获取日期范围数据
+        println!("\n  1. 测试获取日期范围数据（20240429-20240430，RB,CU）:");
+        match get_futures_spot_price_daily("20240429", "20240430", Some(vec!["RB", "CU"])).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  数据详情:");
+                for d in &data {
+                    println!("    {} 【{}】现货:{:.2} 主力:{} 价格:{:.2} 基差:{:.2}", 
+                        d.date, d.symbol, d.spot_price, d.dominant_contract, 
+                        d.dominant_contract_price, d.dom_basis);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取单日所有品种
+        println!("\n  2. 测试获取单日所有品种（20240430）:");
+        match get_futures_spot_price_daily("20240430", "20240430", None).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  前10条:");
+                for d in data.iter().take(10) {
+                    println!("    {} 【{}】现货:{:.2} 基差:{:.2}", 
+                        d.date, d.symbol, d.spot_price, d.dom_basis);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
             }
         }
     }

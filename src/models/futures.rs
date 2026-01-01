@@ -304,3 +304,12 @@ pub struct FuturesSpotPricePrevious {
 pub struct FuturesSpotPricePreviousQuery {
     pub date: String,  // 交易日期 YYYYMMDD
 }
+
+
+/// 期货现货价格日期范围查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesSpotPriceDailyQuery {
+    pub start_date: String,              // 开始日期 YYYYMMDD
+    pub end_date: String,                // 结束日期 YYYYMMDD
+    pub symbols: Option<String>,         // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
+}
