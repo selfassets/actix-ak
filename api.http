@@ -74,8 +74,8 @@ Content-Type: application/json
 
 ["CU2602", "AL2602", "RB2605", "AU2602"]
 
-### 获取品种所有合约实时数据（按品种名称）
-GET {{baseUrl}}/futures/realtime/铜
+### 获取品种所有合约实时数据（按品种名称，如沪铜、螺纹钢）
+GET {{baseUrl}}/futures/realtime/沪铜
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

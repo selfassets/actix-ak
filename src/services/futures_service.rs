@@ -185,16 +185,25 @@ impl FuturesService {
     }
 
     /// 根据品种名称获取对应的node参数
+    /// 支持精确匹配和模糊匹配（包含关键字）
     pub async fn get_symbol_node(&mut self, symbol: &str) -> Result<String> {
         let symbols = self.get_symbol_mark().await?;
         
+        // 先尝试精确匹配
         for s in &symbols {
             if s.symbol == symbol {
                 return Ok(s.mark.clone());
             }
         }
         
-        Err(anyhow!("未找到品种 {} 的映射", symbol))
+        // 再尝试模糊匹配（品种名包含输入关键字）
+        for s in &symbols {
+            if s.symbol.contains(symbol) {
+                return Ok(s.mark.clone());
+            }
+        }
+        
+        Err(anyhow!("未找到品种 {} 的映射，请使用 /futures/symbols 查看可用品种", symbol))
     }
 
     /// 获取指定交易所的所有品种
