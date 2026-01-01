@@ -3727,7 +3727,8 @@ async fn get_gfex_contract_list(client: &Client, symbol: &str, date: &str) -> Re
     let response = client
         .post(url)
         .form(&payload)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+        .header("Content-Type", "application/x-www-form-urlencoded")
         .send()
         .await?;
     
@@ -3737,15 +3738,27 @@ async fn get_gfex_contract_list(client: &Client, symbol: &str, date: &str) -> Re
     
     let json_data: serde_json::Value = response.json().await?;
     
-    let data = json_data["data"].as_array()
-        .ok_or_else(|| anyhow!("未找到data数组"))?;
-    
-    let contracts: Vec<String> = data.iter()
-        .filter_map(|item| item.as_array())
-        .filter_map(|arr| arr.first())
-        .filter_map(|v| v.as_str())
-        .map(|s| s.to_string())
-        .collect();
+    // 尝试多种解析方式
+    let contracts: Vec<String> = if let Some(data) = json_data["data"].as_array() {
+        data.iter()
+            .filter_map(|item| {
+                // 尝试作为数组解析 [[contract_id, ...], ...]
+                if let Some(arr) = item.as_array() {
+                    arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+                }
+                // 尝试作为对象解析 [{contract_id: "xxx"}, ...]
+                else if let Some(obj) = item.as_object() {
+                    obj.values().next().and_then(|v| v.as_str()).map(|s| s.to_string())
+                }
+                // 尝试作为字符串解析 ["contract1", "contract2", ...]
+                else {
+                    item.as_str().map(|s| s.to_string())
+                }
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     
     Ok(contracts)
 }
@@ -3842,6 +3855,117 @@ async fn get_gfex_contract_data(client: &Client, symbol: &str, contract_id: &str
     
     Ok(result)
 }
+
+
+// ==================== 广期所持仓排名（公开接口） ====================
+
+/// 获取广州期货交易所品种列表
+/// 对应 akshare 的 __futures_gfex_vars_list() 函数
+/// 数据来源: http://www.gfex.com.cn/gfex/rcjccpm/hqsj_tjsj.shtml
+pub async fn get_gfex_vars_list() -> Result<Vec<String>> {
+    let client = Client::new();
+    let url = "http://www.gfex.com.cn/u/interfacesWebVariety/loadList";
+    
+    println!("📡 请求广期所品种列表 URL: {}", url);
+    
+    let response = client
+        .post(url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+        .header("Content-Length", "0")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .send()
+        .await?;
+    
+    if !response.status().is_success() {
+        return Err(anyhow!("获取广期所品种列表失败: {}", response.status()));
+    }
+    
+    let json_data: serde_json::Value = response.json().await?;
+    
+    let data = json_data["data"].as_array()
+        .ok_or_else(|| anyhow!("未找到data数组"))?;
+    
+    let vars: Vec<String> = data.iter()
+        .filter_map(|item| item["varietyId"].as_str())
+        .map(|s| s.to_string())
+        .collect();
+    
+    println!("📊 获取到 {} 个品种", vars.len());
+    Ok(vars)
+}
+
+/// 广州期货交易所-日成交持仓排名
+/// 对应 akshare 的 futures_gfex_position_rank() 函数
+/// 数据来源: http://www.gfex.com.cn/gfex/rcjccpm/hqsj_tjsj.shtml
+/// 
+/// date: 交易日期，格式 YYYYMMDD，数据从 20231110 开始
+/// vars_list: 品种代码列表，如 ["SI", "LC"]，为空时返回所有品种
+/// 
+/// 返回: 按合约分组的持仓排名数据
+pub async fn futures_gfex_position_rank(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
+    let client = Client::new();
+    
+    // 获取品种列表
+    let target_vars: Vec<String> = match vars_list {
+        Some(vars) => vars.into_iter().map(|v| v.to_lowercase()).collect(),
+        None => {
+            // 如果未指定品种，获取所有品种
+            match get_gfex_vars_list().await {
+                Ok(vars) => vars,
+                Err(e) => {
+                    log::warn!("获取广期所品种列表失败: {}，使用默认品种列表", e);
+                    vec!["si".to_string(), "lc".to_string(), "ps".to_string()]
+                }
+            }
+        }
+    };
+    
+    println!("📡 请求广期所持仓排名数据，品种: {:?}", target_vars);
+    
+    let mut all_results: Vec<RankTableResponse> = Vec::new();
+    
+    for var in target_vars {
+        // 获取该品种的合约列表
+        let contract_list = match get_gfex_contract_list(&client, &var, date).await {
+            Ok(list) => list,
+            Err(e) => {
+                log::warn!("获取广期所 {} 合约列表失败: {}", var, e);
+                continue;
+            }
+        };
+        
+        if contract_list.is_empty() {
+            log::warn!("广期所 {} 在 {} 无合约数据", var, date);
+            continue;
+        }
+        
+        println!("  品种 {} 有 {} 个合约", var.to_uppercase(), contract_list.len());
+        
+        // 获取每个合约的持仓排名数据
+        for contract in contract_list {
+            match get_gfex_contract_data(&client, &var, &contract, date).await {
+                Ok(data) => {
+                    if !data.is_empty() {
+                        all_results.push(RankTableResponse {
+                            symbol: contract.to_uppercase(),
+                            data,
+                        });
+                    }
+                }
+                Err(e) => {
+                    log::warn!("获取广期所 {} 合约数据失败: {}", contract, e);
+                }
+            }
+        }
+    }
+    
+    // 按合约代码排序
+    all_results.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", all_results.len());
+    Ok(all_results)
+}
+
 
 /// 获取单日期货持仓排名汇总数据
 /// 对应 akshare 的 get_rank_sum() 函数
@@ -5124,6 +5248,65 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取广期所品种列表
+    #[tokio::test]
+    async fn test_get_gfex_vars_list() {
+        println!("\n========== 测试获取广期所品种列表 ==========");
+        
+        match get_gfex_vars_list().await {
+            Ok(vars) => {
+                println!("✅ 获取成功！共 {} 个品种", vars.len());
+                for var in &vars {
+                    println!("  - {}", var);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取广期所持仓排名数据（公开接口）
+    #[tokio::test]
+    async fn test_futures_gfex_position_rank() {
+        println!("\n========== 测试获取广期所持仓排名数据 ==========");
+        
+        // 测试获取指定品种（使用较近的交易日）
+        println!("\n  1. 测试获取指定品种（SI, LC）:");
+        match futures_gfex_position_rank("20251226", Some(vec!["SI", "LC"])).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n    合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("      {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取所有品种
+        println!("\n  2. 测试获取所有品种:");
+        match futures_gfex_position_rank("20251226", None).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个合约", data.len());
+                // 只显示前5个合约
+                for item in data.iter().take(5) {
+                    println!("    合约: {} ({})", item.symbol, 
+                        item.data.first().map(|d| d.variety.as_str()).unwrap_or(""));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
             }
         }
     }
