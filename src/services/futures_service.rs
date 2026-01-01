@@ -391,14 +391,20 @@ pub async fn get_futures_history(symbol: &str, query: &FuturesQuery) -> Result<V
 }
 
 // 获取期货分钟数据
+// period: "1", "5", "15", "30", "60" 分钟
 pub async fn get_futures_minute_data(symbol: &str, period: &str) -> Result<Vec<FuturesHistoryData>> {
     let client = Client::new();
     
-    // period: "1", "5", "15", "30", "60" 分钟
-    let url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewService.getFewMinLine";
+    // 新浪期货分钟K线API基础URL
+    let base_url = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewService.getFewMinLine";
+    
+    // 构建完整URL并输出
+    let full_url = format!("{}?symbol={}&type={}", base_url, symbol, period);
+    log::info!("请求分钟K线数据 URL: {}", full_url);
+    println!("📡 请求URL: {}", full_url);
     
     let response = client
-        .get(url)
+        .get(base_url)
         .query(&[("symbol", symbol), ("type", period)])
         .header("Referer", "https://finance.sina.com.cn/")
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
@@ -1061,7 +1067,7 @@ mod tests {
     async fn test_fetch_futures_minute_data() {
         println!("\n========== 测试获取期货分钟K线数据 ==========");
         
-        let symbol = "CU2501";
+        let symbol = "CU2601";
         let period = "5"; // 5分钟K线
         
         println!("正在获取 {} 的 {}分钟 K线数据...", symbol, period);
