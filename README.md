@@ -7,10 +7,12 @@
 - 🚀 基于 Actix-web 高性能异步框架
 - 📊 股票信息查询
 - 🔮 期货实时数据查询（新浪数据源）
+- 🌍 外盘期货实时行情（LME金属、COMEX贵金属等）
 - 📈 历史数据获取
 - 🔍 股票/期货列表查询
 - 🏥 健康检查接口
 - 📝 结构化API响应
+- ⏱️ 请求超时保护（防止连接挂起）
 
 ## API 接口
 
@@ -66,6 +68,24 @@ Content-Type: application/json
 ["CU2405", "AL2405", "ZN2405"]
 ```
 
+#### 获取外盘期货品种列表
+```
+GET /api/v1/futures/foreign/symbols
+```
+
+#### 获取外盘期货实时行情
+```
+POST /api/v1/futures/foreign/realtime
+Content-Type: application/json
+
+["CAD", "AHD", "ZSD", "NID"]
+```
+
+支持的外盘期货品种：
+- **LME金属**: CAD(伦铜), AHD(伦铝), ZSD(伦锌), NID(伦镍), PBD(伦铅), SND(伦锡)
+- **COMEX贵金属**: GC(黄金), SI(白银)
+- **NYMEX能源**: CL(原油)
+
 ## 期货合约代码说明
 
 支持的交易所及合约格式：
@@ -112,6 +132,14 @@ curl -X POST http://127.0.0.1:8080/api/v1/futures/batch \
   -H "Content-Type: application/json" \
   -d '["CU2405", "AL2405", "ZN2405"]'
 
+# 获取外盘期货品种列表
+curl http://127.0.0.1:8080/api/v1/futures/foreign/symbols
+
+# 获取外盘期货实时行情（LME金属）
+curl -X POST http://127.0.0.1:8080/api/v1/futures/foreign/realtime \
+  -H "Content-Type: application/json" \
+  -d '["CAD", "AHD", "ZSD", "NID"]'
+
 # 获取期货历史数据
 curl "http://127.0.0.1:8080/api/v1/futures/CU2405/history?limit=10"
 ```
@@ -141,8 +169,10 @@ src/
 
 ### 期货数据
 - **实时数据**: 新浪财经期货API
+- **外盘数据**: 新浪财经外盘期货API（LME、COMEX、NYMEX）
 - **数据更新**: 交易时间内实时更新
-- **支持合约**: 国内四大期货交易所主力合约
+- **支持合约**: 国内四大期货交易所主力合约 + 外盘主要品种
+- **超时保护**: 30秒请求超时，10秒连接超时
 
 ### 股票数据
 - **当前版本**: 使用模拟数据
