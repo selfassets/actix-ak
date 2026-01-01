@@ -1286,17 +1286,10 @@ pub async fn get_futures_rule(date: Option<&str>) -> Result<Vec<FuturesRule>> {
 fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
     let mut rules = Vec::new();
     
-    // 查找所有表格（包括thead和tbody）
-    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
-    let tables: Vec<_> = table_re.captures_iter(html).collect();
-    
-    if tables.is_empty() {
+    // 检查是否包含交易规则数据
+    if !html.contains("交易保证金比例") && !html.contains("涨跌停板幅度") {
         return Err(anyhow!("未找到交易规则数据表格"));
     }
-    
-    // 解析表格行（匹配所有tr，包括thead和tbody中的）
-    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
-    let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
     
     // 清理HTML标签
     let clean_html = |s: &str| -> String {
@@ -1304,94 +1297,90 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
         tag_re.replace_all(s, "").trim().to_string()
     };
     
-    // 遍历所有表格
-    for table_cap in &tables {
-        let table_content = table_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+    // 使用正则表达式匹配所有的<tr>...</tr>
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    
+    for row_cap in row_re.captures_iter(html) {
+        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
         
-        // 跳过不包含交易规则数据的表格
-        if !table_content.contains("交易保证金比例") && !table_content.contains("涨跌停板幅度") {
+        // 提取所有单元格
+        let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
+        let cells: Vec<String> = cell_re.captures_iter(row_content)
+            .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+            .collect();
+        
+        // 跳过表头行（包含"交易所"或"品种"或"交易保证金比例"或colspan）
+        if cells.iter().any(|c| c.contains("交易所") || c.contains("交易保证金比例") || c == "品种" || c.contains("保证金收取标准")) {
             continue;
         }
         
-        for row_cap in row_re.captures_iter(table_content) {
-            let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-            let cells: Vec<String> = cell_re.captures_iter(row_content)
-                .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
-                .collect();
+        // 跳过只有一个单元格的行（通常是标题行）
+        if cells.len() <= 1 {
+            continue;
+        }
+        
+        // 数据行至少需要6列
+        // 列: 交易所(0), 品种(1), 代码(2), 交易保证金比例(3), 涨跌停板幅度(4), 合约乘数(5), 
+        //     最小变动价位(6), 限价单每笔最大下单手数(7), 特殊合约参数调整(8), 调整备注(9)
+        if cells.len() >= 6 {
+            let exchange = cells.get(0).cloned().unwrap_or_default();
+            let product = cells.get(1).cloned().unwrap_or_default();
+            let code = cells.get(2).cloned().unwrap_or_default();
             
-            // 跳过表头行（包含"交易所"或"品种"或"交易保证金比例"或colspan）
-            if cells.iter().any(|c| c.contains("交易所") || c.contains("交易保证金比例") || c == "品种" || c.contains("保证金收取标准")) {
+            // 跳过空行或表头行
+            if exchange.is_empty() && product.is_empty() {
                 continue;
             }
             
-            // 跳过只有一个单元格的行（通常是标题行）
-            if cells.len() <= 1 {
+            // 跳过包含"交易所"字样的表头行
+            if exchange == "交易所" || product == "品种" {
                 continue;
             }
             
-            // 数据行至少需要6列
-            // 列: 交易所(0), 品种(1), 代码(2), 交易保证金比例(3), 涨跌停板幅度(4), 合约乘数(5), 
-            //     最小变动价位(6), 限价单每笔最大下单手数(7), 特殊合约参数调整(8), 调整备注(9)
-            if cells.len() >= 6 {
-                let exchange = cells.get(0).cloned().unwrap_or_default();
-                let product = cells.get(1).cloned().unwrap_or_default();
-                let code = cells.get(2).cloned().unwrap_or_default();
-                
-                // 跳过空行或表头行
-                if exchange.is_empty() && product.is_empty() {
-                    continue;
-                }
-                
-                // 跳过包含"交易所"字样的表头行
-                if exchange == "交易所" || product == "品种" {
-                    continue;
-                }
-                
-                // 解析保证金比例（去掉%，处理"--"）
-                let margin_rate = cells.get(3)
-                    .and_then(|s| {
-                        let s = s.trim_end_matches('%').trim();
-                        if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
-                    });
-                
-                // 解析涨跌停板幅度（去掉%，处理"--"）
-                let price_limit = cells.get(4)
-                    .and_then(|s| {
-                        let s = s.trim_end_matches('%').trim();
-                        if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
-                    });
-                
-                // 解析合约乘数
-                let contract_size = cells.get(5)
-                    .and_then(|s| s.parse::<f64>().ok());
-                
-                // 解析最小变动价位
-                let price_tick = cells.get(6)
-                    .and_then(|s| s.parse::<f64>().ok());
-                
-                // 解析限价单每笔最大下单手数
-                let max_order_size = cells.get(7)
-                    .and_then(|s| s.parse::<u64>().ok());
-                
-                // 特殊合约参数调整
-                let special_note = cells.get(8).cloned().filter(|s| !s.is_empty());
-                
-                // 调整备注
-                let remark = cells.get(9).cloned().filter(|s| !s.is_empty());
-                
-                rules.push(FuturesRule {
-                    exchange,
-                    product,
-                    code,
-                    margin_rate,
-                    price_limit,
-                    contract_size,
-                    price_tick,
-                    max_order_size,
-                    special_note,
-                    remark,
+            // 解析保证金比例（去掉%，处理"--"）
+            let margin_rate = cells.get(3)
+                .and_then(|s| {
+                    let s = s.trim_end_matches('%').trim();
+                    if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
                 });
-            }
+            
+            // 解析涨跌停板幅度（去掉%，处理"--"）
+            let price_limit = cells.get(4)
+                .and_then(|s| {
+                    let s = s.trim_end_matches('%').trim();
+                    if s == "--" || s.is_empty() { None } else { s.parse::<f64>().ok() }
+                });
+            
+            // 解析合约乘数
+            let contract_size = cells.get(5)
+                .and_then(|s| s.parse::<f64>().ok());
+            
+            // 解析最小变动价位
+            let price_tick = cells.get(6)
+                .and_then(|s| s.parse::<f64>().ok());
+            
+            // 解析限价单每笔最大下单手数
+            let max_order_size = cells.get(7)
+                .and_then(|s| s.parse::<u64>().ok());
+            
+            // 特殊合约参数调整
+            let special_note = cells.get(8).cloned().filter(|s| !s.is_empty());
+            
+            // 调整备注
+            let remark = cells.get(9).cloned().filter(|s| !s.is_empty());
+            
+            rules.push(FuturesRule {
+                exchange,
+                product,
+                code,
+                margin_rate,
+                price_limit,
+                contract_size,
+                price_tick,
+                max_order_size,
+                special_note,
+                remark,
+            });
         }
     }
     
