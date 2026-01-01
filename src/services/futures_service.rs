@@ -1043,7 +1043,7 @@ mod tests {
         println!("✅ 分钟K线数据解析测试通过！");
     }
 
-    /// 测试北京时间获取函数
+    /// 测试北京时间获取函数 ok
     #[test]
     fn test_get_beijing_time() {
         println!("\n========== 测试北京时间获取 ==========");
@@ -1060,7 +1060,7 @@ mod tests {
     // 以下测试会实际调用新浪API，需要网络连接
     // 运行命令: cargo test -- --nocapture
 
-    /// 测试获取单个期货合约实时数据
+    /// 测试获取单个期货合约实时数据 ok
     /// 调用新浪API获取铜期货(CU)的实时行情并输出
     #[tokio::test]
     async fn test_fetch_single_futures_realtime() {
@@ -1096,7 +1096,7 @@ mod tests {
         }
     }
 
-    /// 测试批量获取多个期货合约实时数据
+    /// 测试批量获取多个期货合约实时数据 ok
     /// 同时获取铜、铝、螺纹钢的实时行情
     #[tokio::test]
     async fn test_fetch_multiple_futures_realtime() {
