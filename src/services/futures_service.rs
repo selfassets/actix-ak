@@ -10,7 +10,7 @@ use crate::models::{
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
     FuturesFeesInfo, FuturesCommInfo, FuturesRule,
-    Futures99Symbol, FuturesInventory99
+    Futures99Symbol, FuturesInventory99, FuturesSpotPrice
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -1543,6 +1543,271 @@ pub async fn get_futures_inventory_99(symbol: &str) -> Result<Vec<FuturesInvento
     Ok(inventory_list)
 }
 
+// ==================== 现货价格及基差数据 ====================
+
+const SPOT_PRICE_URL: &str = "https://www.100ppi.com/sf";
+
+/// 中文品种名称到英文代码的映射
+fn chinese_to_english(name: &str) -> Option<&'static str> {
+    match name {
+        // 上海期货交易所
+        "铜" => Some("CU"),
+        "螺纹钢" => Some("RB"),
+        "锌" => Some("ZN"),
+        "铝" => Some("AL"),
+        "黄金" => Some("AU"),
+        "线材" => Some("WR"),
+        "天然橡胶" => Some("RU"),
+        "铅" => Some("PB"),
+        "白银" => Some("AG"),
+        "沥青" | "石油沥青" => Some("BU"),
+        "热轧卷板" => Some("HC"),
+        "镍" => Some("NI"),
+        "锡" => Some("SN"),
+        "燃料油" => Some("FU"),
+        "不锈钢" => Some("SS"),
+        "纸浆" => Some("SP"),
+        "氧化铝" => Some("AO"),
+        "丁二烯橡胶" => Some("BR"),
+        // 大连商品交易所
+        "豆一" => Some("A"),
+        "豆二" => Some("B"),
+        "豆粕" => Some("M"),
+        "豆油" => Some("Y"),
+        "玉米" => Some("C"),
+        "玉米淀粉" => Some("CS"),
+        "棕榈油" => Some("P"),
+        "鸡蛋" => Some("JD"),
+        "聚乙烯" | "LLDPE" => Some("L"),
+        "聚氯乙烯" | "PVC" => Some("V"),
+        "聚丙烯" | "PP" => Some("PP"),
+        "焦炭" => Some("J"),
+        "焦煤" => Some("JM"),
+        "铁矿石" => Some("I"),
+        "乙二醇" => Some("EG"),
+        "苯乙烯" => Some("EB"),
+        "液化石油气" | "LPG" => Some("PG"),
+        "生猪" => Some("LH"),
+        // 郑州商品交易所
+        "白糖" => Some("SR"),
+        "棉花" => Some("CF"),
+        "PTA" => Some("TA"),
+        "菜籽油" | "菜油" => Some("OI"),
+        "菜籽粕" | "菜粕" => Some("RM"),
+        "甲醇" => Some("MA"),
+        "玻璃" => Some("FG"),
+        "动力煤" => Some("ZC"),
+        "硅铁" => Some("SF"),
+        "锰硅" => Some("SM"),
+        "苹果" => Some("AP"),
+        "红枣" => Some("CJ"),
+        "尿素" => Some("UR"),
+        "纯碱" => Some("SA"),
+        "短纤" | "涤纶短纤" => Some("PF"),
+        "花生" => Some("PK"),
+        "菜籽" => Some("RS"),
+        "棉纱" => Some("CY"),
+        "粳稻" => Some("JR"),
+        "晚籼稻" => Some("LR"),
+        "早籼稻" => Some("RI"),
+        "强麦" => Some("WH"),
+        "普麦" => Some("PM"),
+        // 上海国际能源交易中心
+        "原油" => Some("SC"),
+        "20号胶" => Some("NR"),
+        "低硫燃料油" => Some("LU"),
+        "国际铜" => Some("BC"),
+        // 广州期货交易所
+        "工业硅" => Some("SI"),
+        "碳酸锂" => Some("LC"),
+        // 中国金融期货交易所
+        "沪深300" => Some("IF"),
+        "上证50" => Some("IH"),
+        "中证500" => Some("IC"),
+        "中证1000" => Some("IM"),
+        "2年期国债" => Some("TS"),
+        "5年期国债" => Some("TF"),
+        "10年期国债" => Some("T"),
+        "30年期国债" => Some("TL"),
+        // 其他别名
+        "PX" => Some("PX"),
+        _ => None,
+    }
+}
+
+/// 获取期货现货价格及基差数据
+/// 对应 akshare 的 futures_spot_price() 函数
+/// 数据来源: https://www.100ppi.com/sf/
+/// date: 交易日期，格式 YYYYMMDD
+/// symbols: 品种代码列表，为空时返回所有品种
+pub async fn get_futures_spot_price(date: &str, symbols: Option<Vec<&str>>) -> Result<Vec<FuturesSpotPrice>> {
+    use scraper::{Html, Selector};
+    
+    // 格式化日期
+    let formatted_date = if date.len() == 8 {
+        format!("{}-{}-{}", &date[0..4], &date[4..6], &date[6..8])
+    } else {
+        date.to_string()
+    };
+    
+    let url = format!("{}/day-{}.html", SPOT_PRICE_URL, formatted_date);
+    println!("📡 请求现货价格数据 URL: {}", url);
+    
+    let client = Client::new();
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取现货价格数据失败: {}", response.status()));
+    }
+
+    // 使用GBK编码读取
+    let bytes = response.bytes().await?;
+    let text = encoding_rs::GBK.decode(&bytes).0.to_string();
+    
+    // 解析HTML
+    let document = Html::parse_document(&text);
+    
+    // 查找ID为fdata的表格
+    let table_selector = Selector::parse("table#fdata").unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+    let td_selector = Selector::parse("td").unwrap();
+    
+    let mut spot_prices = Vec::new();
+    
+    let main_table = document.select(&table_selector).next();
+    if main_table.is_none() {
+        return Err(anyhow!("未找到数据表格(#fdata)"));
+    }
+    
+    let main_table = main_table.unwrap();
+    let rows: Vec<_> = main_table.select(&tr_selector).collect();
+    
+    for row in rows {
+        let cells: Vec<String> = row.select(&td_selector)
+            .map(|cell| cell.text().collect::<Vec<_>>().join("").trim().to_string())
+            .collect();
+        
+        // 需要8列数据
+        if cells.len() < 7 {
+            continue;
+        }
+        
+        let first_cell = cells[0].replace('\u{a0}', "").trim().to_string();
+        
+        // 跳过表头行和交易所分隔行
+        if first_cell.contains("交易所") || first_cell == "商品" || first_cell.is_empty() {
+            continue;
+        }
+        
+        // 尝试解析品种名称
+        let chinese_name = first_cell.trim();
+        let symbol = match chinese_to_english(chinese_name) {
+            Some(s) => s.to_string(),
+            None => {
+                // 如果是英文代码（如PTA），直接使用
+                if chinese_name.chars().all(|c| c.is_ascii_alphabetic()) {
+                    chinese_name.to_uppercase()
+                } else {
+                    continue;
+                }
+            }
+        };
+        
+        // 如果指定了品种列表，检查是否在列表中
+        if let Some(ref filter_symbols) = symbols {
+            if !filter_symbols.iter().any(|s| s.eq_ignore_ascii_case(&symbol)) {
+                continue;
+            }
+        }
+        
+        // 解析数值 - 第2列是现货价格（去除&nbsp;）
+        let spot_price = cells.get(1)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+        
+        if spot_price == 0.0 {
+            continue;
+        }
+        
+        // 第3列是近月合约代码，第4列是近月价格
+        let near_contract_raw = cells.get(2)
+            .map(|s| s.replace('\u{a0}', ""))
+            .unwrap_or_default();
+        let near_contract_price = cells.get(3)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+        
+        // 第6列是主力合约代码，第7列是主力价格
+        let dominant_contract_raw = cells.get(5)
+            .map(|s| s.replace('\u{a0}', ""))
+            .unwrap_or_default();
+        let dominant_contract_price = cells.get(6)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+        
+        // 提取合约月份并构建合约代码
+        let near_month = extract_contract_month(&near_contract_raw);
+        let dominant_month = extract_contract_month(&dominant_contract_raw);
+        
+        let near_contract = format!("{}{}", symbol.to_lowercase(), near_month);
+        let dominant_contract = format!("{}{}", symbol.to_lowercase(), dominant_month);
+        
+        // 计算基差
+        // 基差 = 期货价格 - 现货价格
+        let near_basis = near_contract_price - spot_price;
+        let dom_basis = dominant_contract_price - spot_price;
+        
+        // 计算基差率
+        let near_basis_rate = if spot_price != 0.0 {
+            near_contract_price / spot_price - 1.0
+        } else {
+            0.0
+        };
+        
+        let dom_basis_rate = if spot_price != 0.0 {
+            dominant_contract_price / spot_price - 1.0
+        } else {
+            0.0
+        };
+        
+        spot_prices.push(FuturesSpotPrice {
+            date: date.replace("-", ""),
+            symbol,
+            spot_price,
+            near_contract,
+            near_contract_price,
+            dominant_contract,
+            dominant_contract_price,
+            near_basis,
+            dom_basis,
+            near_basis_rate,
+            dom_basis_rate,
+        });
+    }
+    
+    println!("📊 解析到 {} 条现货价格数据", spot_prices.len());
+    Ok(spot_prices)
+}
+
+/// 从合约代码中提取月份
+fn extract_contract_month(contract: &str) -> String {
+    // 提取数字部分
+    let digits: String = contract.chars().filter(|c| c.is_ascii_digit()).collect();
+    if digits.len() >= 4 {
+        digits[digits.len()-4..].to_string()
+    } else {
+        digits
+    }
+}
+
 /// 解析期货手续费HTML
 #[allow(dead_code)]
 fn parse_comm_info_html(html: &str, exchange_filter: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
@@ -2757,6 +3022,120 @@ mod tests {
         match get_futures_rule(None).await {
             Ok(rules) => {
                 println!("  ✅ 获取成功！共 {} 条规则数据", rules.len());
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取99期货网库存数据
+    #[tokio::test]
+    async fn test_futures_inventory_99() {
+        println!("\n========== 测试获取99期货网库存数据 ==========");
+        
+        // 测试获取品种映射
+        println!("\n  1. 测试获取品种映射:");
+        match get_99_symbol_map().await {
+            Ok(symbols) => {
+                println!("  ✅ 获取成功！共 {} 个品种", symbols.len());
+                println!("\n  前10个品种:");
+                for s in symbols.iter().take(10) {
+                    println!("    {} ({}) - ID: {}", s.name, s.code, s.product_id);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取库存数据（使用中文名称）
+        println!("\n  2. 测试获取库存数据（豆一）:");
+        match get_futures_inventory_99("豆一").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  最近10条:");
+                for d in data.iter().rev().take(10) {
+                    println!("    {} - 收盘价: {:>10.2} - 库存: {:>10.0}", 
+                        d.date, 
+                        d.close_price.unwrap_or(0.0),
+                        d.inventory.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取库存数据（使用代码）
+        println!("\n  3. 测试获取库存数据（cu）:");
+        match get_futures_inventory_99("cu").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  最近5条:");
+                for d in data.iter().rev().take(5) {
+                    println!("    {} - 收盘价: {:>10.2} - 库存: {:>10.0}", 
+                        d.date, 
+                        d.close_price.unwrap_or(0.0),
+                        d.inventory.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取现货价格及基差数据
+    #[tokio::test]
+    async fn test_futures_spot_price() {
+        println!("\n========== 测试获取现货价格及基差数据 ==========");
+        
+        // 测试获取所有品种
+        println!("\n  1. 测试获取所有品种（20240430）:");
+        match get_futures_spot_price("20240430", None).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  前15条:");
+                println!("  {:<8} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10}", 
+                    "品种", "现货价", "近月合约", "近月价", "主力合约", "主力价", "主力基差");
+                for d in data.iter().take(15) {
+                    println!("  {:<8} {:>10.2} {:>12} {:>10.2} {:>12} {:>10.2} {:>10.2}", 
+                        d.symbol, d.spot_price, d.near_contract, d.near_contract_price,
+                        d.dominant_contract, d.dominant_contract_price, d.dom_basis);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取指定品种
+        println!("\n  2. 测试获取指定品种（RB,CU,AU）:");
+        match get_futures_spot_price("20240430", Some(vec!["RB", "CU", "AU"])).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in &data {
+                    println!("    【{}】现货:{:.2} 主力:{} 价格:{:.2} 基差:{:.2} 基差率:{:.2}%", 
+                        d.symbol, d.spot_price, d.dominant_contract, 
+                        d.dominant_contract_price, d.dom_basis, d.dom_basis_rate * 100.0);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试最近日期
+        println!("\n  3. 测试获取最近日期（20250106）:");
+        match get_futures_spot_price("20250106", Some(vec!["RB", "CU"])).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in &data {
+                    println!("    【{}】现货:{:.2} 主力:{} 价格:{:.2} 基差:{:.2}", 
+                        d.symbol, d.spot_price, d.dominant_contract, 
+                        d.dominant_contract_price, d.dom_basis);
+                }
             }
             Err(e) => {
                 println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);

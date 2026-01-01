@@ -258,3 +258,27 @@ pub struct FuturesInventory99 {
 pub struct FuturesInventory99Query {
     pub symbol: String,  // 品种名称或代码，如"豆一"或"A"
 }
+
+/// 期货现货价格及基差数据
+/// 对应 akshare 的 futures_spot_price() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesSpotPrice {
+    pub date: String,                    // 日期 YYYYMMDD
+    pub symbol: String,                  // 品种代码
+    pub spot_price: f64,                 // 现货价格
+    pub near_contract: String,           // 临近交割合约
+    pub near_contract_price: f64,        // 临近交割合约结算价
+    pub dominant_contract: String,       // 主力合约
+    pub dominant_contract_price: f64,    // 主力合约结算价
+    pub near_basis: f64,                 // 临近交割合约相对现货的基差
+    pub dom_basis: f64,                  // 主力合约相对现货的基差
+    pub near_basis_rate: f64,            // 临近交割合约相对现货的基差率
+    pub dom_basis_rate: f64,             // 主力合约相对现货的基差率
+}
+
+/// 期货现货价格查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesSpotPriceQuery {
+    pub date: String,                    // 交易日期 YYYYMMDD
+    pub symbols: Option<String>,         // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
+}
