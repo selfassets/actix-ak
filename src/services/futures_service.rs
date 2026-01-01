@@ -1297,10 +1297,16 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
         tag_re.replace_all(s, "").trim().to_string()
     };
     
+    // 预处理HTML：确保每个<tr>标签都在单独的行上
+    let html = html
+        .replace("</tr><tr", "</tr>\n<tr")
+        .replace("<tbody><tr", "<tbody>\n<tr")
+        .replace("</thead><tbody>", "</thead>\n<tbody>\n");
+    
     // 使用正则表达式匹配所有的<tr>...</tr>
     let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
     
-    for row_cap in row_re.captures_iter(html) {
+    for row_cap in row_re.captures_iter(&html) {
         let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
         
         // 提取所有单元格
