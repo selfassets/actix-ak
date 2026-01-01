@@ -1060,7 +1060,7 @@ mod tests {
     async fn test_fetch_futures_history() {
         println!("\n========== 测试获取期货历史K线数据 ==========");
         
-        let symbol = "CU2501";
+        let symbol = "CU2601";
         let query = FuturesQuery {
             symbol: None,
             exchange: None,
@@ -1092,7 +1092,7 @@ mod tests {
         }
     }
 
-    /// 测试获取期货分钟K线数据
+    /// 测试获取期货分钟K线数据 ok
     /// 获取指定合约的分钟级别数据
     #[tokio::test]
     async fn test_fetch_futures_minute_data() {

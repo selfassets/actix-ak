@@ -23,6 +23,8 @@ pub struct StockHistoryData {
     pub volume: u64,
 }
 
+/// 股票查询参数
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct StockQuery {
     pub symbol: Option<String>,
