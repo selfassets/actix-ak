@@ -1319,13 +1319,19 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
             }
         }
         
-        // 跳过表头行
-        if cells.iter().any(|c| c.contains("交易所") || c.contains("交易保证金比例") || c == "品种" || c.contains("保证金收取标准")) {
+        // 跳过只有一个单元格的行（日期行）
+        if cells.len() <= 1 {
             continue;
         }
         
-        // 跳过只有一个单元格的行
-        if cells.len() <= 1 {
+        // 只检查前4列来判断是否为表头行（避免误判数据行中的特殊说明列）
+        let header_cells: Vec<&String> = cells.iter().take(4).collect();
+        let is_header = header_cells.iter().any(|c| {
+            c.contains("交易所") || c.contains("交易保证金比例") || 
+            *c == "品种" || c.contains("保证金收取标准")
+        });
+        
+        if is_header {
             continue;
         }
         
