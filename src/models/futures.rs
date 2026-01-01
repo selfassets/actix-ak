@@ -164,13 +164,19 @@ pub struct ForeignFuturesDetailItem {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FuturesFeesInfo {
     pub exchange: String,              // 交易所
-    pub product: String,               // 品种
-    pub contract: String,              // 合约
+    pub contract_code: String,         // 合约代码
+    pub contract_name: String,         // 合约名称
+    pub product_code: String,          // 品种代码
+    pub product_name: String,          // 品种名称
     pub contract_size: String,         // 合约乘数
-    pub price_tick: String,            // 最小变动价位
-    pub margin_rate: String,           // 保证金率
-    pub open_fee: String,              // 开仓手续费
-    pub close_fee: String,             // 平仓手续费
-    pub close_today_fee: String,       // 平今手续费
+    pub price_tick: String,            // 最小跳动
+    pub open_fee_rate: String,         // 开仓费率
+    pub open_fee: String,              // 开仓费用/手
+    pub close_fee_rate: String,        // 平仓费率
+    pub close_fee: String,             // 平仓费用/手
+    pub close_today_fee_rate: String,  // 平今费率
+    pub close_today_fee: String,       // 平今费用/手
+    pub long_margin_rate: String,      // 做多保证金率
+    pub short_margin_rate: String,     // 做空保证金率
     pub updated_at: String,            // 更新时间
 }

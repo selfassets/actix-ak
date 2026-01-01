@@ -1168,51 +1168,57 @@ fn parse_fees_html(html: &str) -> Result<Vec<FuturesFeesInfo>> {
     
     println!("📅 数据更新时间: {}", updated_at);
     
-    // 查找表格
-    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
-    let table_match = table_re.captures(html);
+    // 查找tbody内容
+    let tbody_start = html.find("<tbody>");
+    let tbody_end = html.find("</tbody>");
     
-    if table_match.is_none() {
+    if tbody_start.is_none() || tbody_end.is_none() {
         return Err(anyhow!("未找到费用数据表格"));
     }
     
-    let table_content = table_match.unwrap().get(1).map(|m| m.as_str()).unwrap_or("");
+    let tbody_content = &html[tbody_start.unwrap()..tbody_end.unwrap()];
     
-    // 解析表格行
-    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
-    let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
-    
-    // 清理HTML标签
-    let clean_html = |s: &str| -> String {
-        let tag_re = Regex::new(r"<[^>]+>").unwrap();
-        tag_re.replace_all(s, "").trim().to_string()
-    };
-    
-    let mut is_header = true;
-    for row_cap in row_re.captures_iter(table_content) {
-        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
-        let cells: Vec<_> = cell_re.captures_iter(row_content)
-            .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+    // 按行分割
+    for row in tbody_content.split("<tr>").skip(1) {
+        // 提取所有td内容
+        let cells: Vec<String> = row.split("<td")
+            .skip(1)
+            .filter_map(|cell| {
+                // 找到>和</td>之间的内容
+                let start = cell.find('>')?;
+                let end = cell.find("</td>")?;
+                let content = &cell[start + 1..end];
+                // 移除style属性等HTML标签
+                let clean = content
+                    .replace("style=\"background-color:yellow;\"", "")
+                    .replace("style=\"background-color:red;\"", "")
+                    .trim()
+                    .to_string();
+                Some(clean)
+            })
             .collect();
         
-        // 跳过表头
-        if is_header {
-            is_header = false;
-            continue;
-        }
-        
-        // 期望的列: 交易所, 品种, 合约, 合约乘数, 最小变动价位, 保证金率, 开仓手续费, 平仓手续费, 平今手续费
-        if cells.len() >= 9 {
+        // 表格列: 交易所(0), 合约代码(1), 合约名称(2), 品种代码(3), 品种名称(4), 
+        // 合约乘数(5), 最小跳动(6), 开仓费率(7), 开仓费用/手(8), 平仓费率(9), 
+        // 平仓费用/手(10), 平今费率(11), 平今费用/手(12), 做多保证金率(13), 
+        // 做多保证金/手(14), 做空保证金率(15), ...
+        if cells.len() >= 16 {
             fees_list.push(FuturesFeesInfo {
                 exchange: cells[0].clone(),
-                product: cells[1].clone(),
-                contract: cells[2].clone(),
-                contract_size: cells[3].clone(),
-                price_tick: cells[4].clone(),
-                margin_rate: cells[5].clone(),
-                open_fee: cells[6].clone(),
-                close_fee: cells[7].clone(),
-                close_today_fee: cells[8].clone(),
+                contract_code: cells[1].clone(),
+                contract_name: cells[2].clone(),
+                product_code: cells[3].clone(),
+                product_name: cells[4].clone(),
+                contract_size: cells[5].clone(),
+                price_tick: cells[6].clone(),
+                open_fee_rate: cells[7].clone(),
+                open_fee: cells[8].clone(),
+                close_fee_rate: cells[9].clone(),
+                close_fee: cells[10].clone(),
+                close_today_fee_rate: cells[11].clone(),
+                close_today_fee: cells[12].clone(),
+                long_margin_rate: cells[13].clone(),
+                short_margin_rate: cells[15].clone(),
                 updated_at: updated_at.clone(),
             });
         }
@@ -2145,6 +2151,34 @@ mod tests {
             }
             Err(e) => {
                 println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取期货交易费用参照表
+    #[tokio::test]
+    async fn test_futures_fees_info() {
+        println!("\n========== 测试获取期货交易费用参照表 ==========");
+        
+        match get_futures_fees_info().await {
+            Ok(fees) => {
+                println!("✅ 获取成功！共 {} 条费用数据", fees.len());
+                println!("\n  前20条数据:");
+                println!("  {:<6} {:<10} {:<8} {:<8} {:>8} {:>8} {:>10} {:>10} {:>10}", 
+                    "交易所", "合约代码", "品种", "乘数", "开仓费", "平仓费", "平今费", "多保证金", "空保证金");
+                for f in fees.iter().take(20) {
+                    println!("  {:<6} {:<10} {:<8} {:<8} {:>8} {:>8} {:>10} {:>10} {:>10}", 
+                        f.exchange, f.contract_code, f.product_name, f.contract_size, 
+                        f.open_fee, f.close_fee, f.close_today_fee, f.long_margin_rate, f.short_margin_rate);
+                }
+                
+                // 显示更新时间
+                if let Some(first) = fees.first() {
+                    println!("\n  📅 数据更新时间: {}", first.updated_at);
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
             }
         }
     }
