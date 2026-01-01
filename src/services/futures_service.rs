@@ -1,3 +1,24 @@
+//! 期货数据服务
+//! 
+//! 提供期货数据的获取和处理逻辑，参考 akshare 实现
+//! 
+//! ## 数据来源
+//! - 新浪财经：实时行情、K线数据、持仓排名
+//! - 100ppi：现货价格及基差数据
+//! - 99期货网：库存数据
+//! - OpenCTP：交易费用数据
+//! - 国泰君安：交易规则数据
+//! 
+//! ## 主要功能
+//! - 期货实时行情获取
+//! - 日K线/分钟K线数据
+//! - 品种映射和交易所信息
+//! - 主力连续合约数据
+//! - 持仓排名数据
+//! - 外盘期货数据
+//! - 现货价格及基差
+//! - 交易费用和规则
+
 #![allow(dead_code)]
 
 use anyhow::{Result, anyhow};
@@ -21,28 +42,44 @@ use crate::models::{
     SinaHoldPosition
 };
 
-// 获取北京时间字符串（带+08:00时区）
+/// 获取北京时间字符串（ISO 8601 格式，带+08:00时区）
 fn get_beijing_time() -> String {
     Utc::now().with_timezone(&Shanghai).to_rfc3339()
 }
 
-// 新浪期货API常量
+// ==================== 新浪期货 API 常量 ====================
+
+/// 新浪期货实时行情 API
 const SINA_FUTURES_REALTIME_API: &str = "https://hq.sinajs.cn";
+/// 新浪期货列表 API
 const SINA_FUTURES_LIST_API: &str = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQFuturesData";
+/// 新浪期货品种映射 JS 文件
 const SINA_FUTURES_SYMBOL_URL: &str = "https://vip.stock.finance.sina.com.cn/quotes_service/view/js/qihuohangqing.js";
+/// 新浪期货日K线 API
 const SINA_FUTURES_DAILY_API: &str = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20_temp=/InnerFuturesNewService.getDailyKLine";
+/// 新浪期货分钟K线 API
 const SINA_FUTURES_MINUTE_API: &str = "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewService.getFewMinLine";
+/// 新浪期货合约详情页面
 const SINA_CONTRACT_DETAIL_URL: &str = "https://finance.sina.com.cn/futures/quotes";
 
 /// 期货数据服务
-/// 参考 akshare/futures/futures_zh_sina.py 实现
+/// 
+/// 封装期货数据的获取逻辑，参考 akshare/futures/futures_zh_sina.py 实现
+/// 
+/// ## 功能
+/// - 品种映射：获取期货品种和代码的映射关系
+/// - 实时行情：获取单个或多个合约的实时数据
+/// - K线数据：获取日K线和分钟K线
+/// - 合约详情：获取合约的交易规则
 pub struct FuturesService {
+    /// HTTP 客户端
     client: Client,
-    // 缓存品种映射数据
+    /// 品种映射缓存
     symbol_mark_cache: Option<Vec<FuturesSymbolMark>>,
 }
 
 impl FuturesService {
+    /// 创建新的期货服务实例
     pub fn new() -> Self {
         Self {
             client: Client::new(),
@@ -53,8 +90,12 @@ impl FuturesService {
     // ==================== 品种映射相关 ====================
 
     /// 获取期货品种和代码映射表
+    /// 
     /// 对应 akshare 的 futures_symbol_mark() 函数
-    /// 从新浪JS文件动态解析品种信息
+    /// 从新浪 JS 文件动态解析品种信息
+    /// 
+    /// # 返回
+    /// 品种映射列表，包含交易所、品种名称和 node 参数
     pub async fn get_symbol_mark(&mut self) -> Result<Vec<FuturesSymbolMark>> {
         // 如果有缓存，直接返回
         if let Some(ref cache) = self.symbol_mark_cache {
@@ -77,7 +118,7 @@ impl FuturesService {
         let bytes = response.bytes().await?;
         let text = encoding_rs::GBK.decode(&bytes).0.to_string();
         
-        // 解析JS中的品种数据
+        // 解析 JS 中的品种数据
         let symbols = self.parse_symbol_mark_js(&text)?;
         
         // 缓存结果
@@ -86,8 +127,9 @@ impl FuturesService {
         Ok(symbols)
     }
 
-    /// 解析新浪JS文件中的品种映射数据
-    /// JS格式: ARRFUTURESNODES = { czce: ['郑州商品交易所', ['PTA', 'pta_qh', '16'], ...], ... }
+    /// 解析新浪 JS 文件中的品种映射数据
+    /// 
+    /// JS 格式: ARRFUTURESNODES = { czce: ['郑州商品交易所', ['PTA', 'pta_qh', '16'], ...], ... }
     fn parse_symbol_mark_js(&self, js_text: &str) -> Result<Vec<FuturesSymbolMark>> {
         let mut symbols = Vec::new();
         

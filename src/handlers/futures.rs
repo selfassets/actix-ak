@@ -1,3 +1,35 @@
+//! 期货接口处理器
+//! 
+//! 提供期货数据的 HTTP API 端点
+//! 
+//! ## API 列表
+//! 
+//! ### 基础接口
+//! - GET /futures - 获取期货列表
+//! - GET /futures/{symbol} - 获取单个合约实时数据
+//! - GET /futures/{symbol}/history - 获取日K线数据
+//! - GET /futures/{symbol}/minute - 获取分钟K线数据
+//! - GET /futures/{symbol}/detail - 获取合约详情
+//! 
+//! ### 品种和交易所
+//! - GET /futures/exchanges - 获取交易所列表
+//! - GET /futures/symbols - 获取品种映射表
+//! - GET /futures/symbols/{exchange} - 获取指定交易所品种
+//! 
+//! ### 主力连续合约
+//! - GET /futures/main/display - 获取主力连续合约一览
+//! - GET /futures/main/{symbol}/daily - 获取主力连续日K线
+//! 
+//! ### 持仓和费用
+//! - GET /futures/hold_pos - 获取持仓排名
+//! - GET /futures/fees - 获取交易费用
+//! - GET /futures/rule - 获取交易规则
+//! 
+//! ### 现货价格
+//! - GET /futures/spot_price - 获取现货价格及基差
+//! - GET /futures/spot_price_previous - 获取历史现货价格
+//! - GET /futures/spot_price_daily - 获取现货价格日线
+
 use actix_web::{web, HttpResponse, Result};
 use crate::models::{
     ApiResponse, FuturesInfo, FuturesHistoryData, FuturesQuery,
@@ -22,7 +54,11 @@ use crate::services::futures_service::{
 };
 
 /// 获取单个期货合约实时数据
-/// GET /futures/{symbol}
+/// 
+/// GET /api/v1/futures/{symbol}
+/// 
+/// # 参数
+/// - symbol: 合约代码（如 RB2510）
 pub async fn get_futures_info(path: web::Path<String>) -> Result<HttpResponse> {
     let symbol = path.into_inner();
     let service = FuturesService::new();
@@ -40,7 +76,12 @@ pub async fn get_futures_info(path: web::Path<String>) -> Result<HttpResponse> {
 }
 
 /// 获取期货日K线历史数据
-/// GET /futures/{symbol}/history?limit=30
+/// 
+/// GET /api/v1/futures/{symbol}/history?limit=30
+/// 
+/// # 参数
+/// - symbol: 合约代码
+/// - limit: 返回数量限制（可选，默认30）
 pub async fn get_history(
     path: web::Path<String>,
     query: web::Query<FuturesQuery>,
