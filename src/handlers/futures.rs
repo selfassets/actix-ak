@@ -7,7 +7,8 @@ use crate::models::{
     ForeignFuturesHistData, ForeignFuturesDetail, FuturesFeesInfo,
     FuturesCommInfo, FuturesCommQuery, FuturesRule, FuturesRuleQuery,
     Futures99Symbol, FuturesInventory99, FuturesInventory99Query,
-    FuturesSpotPrice, FuturesSpotPriceQuery
+    FuturesSpotPrice, FuturesSpotPriceQuery,
+    FuturesSpotPricePrevious, FuturesSpotPricePreviousQuery
 };
 use crate::services::futures_service::{
     FuturesService, get_futures_history, get_futures_minute_data,
@@ -15,7 +16,8 @@ use crate::services::futures_service::{
     get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina,
     get_futures_foreign_hist, get_futures_foreign_detail, get_futures_fees_info,
     get_futures_comm_info, get_futures_rule,
-    get_99_symbol_map, get_futures_inventory_99, get_futures_spot_price
+    get_99_symbol_map, get_futures_inventory_99, get_futures_spot_price,
+    get_futures_spot_price_previous
 };
 
 /// 获取单个期货合约实时数据
@@ -450,6 +452,22 @@ pub async fn get_spot_price(query: web::Query<FuturesSpotPriceQuery>) -> Result<
     }
 }
 
+/// 获取期货现货价格及基差历史数据（包含180日统计）
+/// GET /futures/spot_price_previous?date=20240430
+/// 对应 akshare 的 futures_spot_price_previous()
+pub async fn get_spot_price_previous(query: web::Query<FuturesSpotPricePreviousQuery>) -> Result<HttpResponse> {
+    match get_futures_spot_price_previous(&query.date).await {
+        Ok(data) => {
+            let response = ApiResponse::success(data);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<Vec<FuturesSpotPricePrevious>>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
 /// 配置期货相关路由
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -469,6 +487,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/inventory99/symbols", web::get().to(get_inventory99_symbols))
             // 现货价格及基差
             .route("/spot_price", web::get().to(get_spot_price))
+            .route("/spot_price_previous", web::get().to(get_spot_price_previous))
             // 主力连续合约
             .route("/main/display", web::get().to(get_display_main_contracts))
             .route("/main/{symbol}/daily", web::get().to(get_main_daily))

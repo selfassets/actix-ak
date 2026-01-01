@@ -282,3 +282,25 @@ pub struct FuturesSpotPriceQuery {
     pub date: String,                    // 交易日期 YYYYMMDD
     pub symbols: Option<String>,         // 品种代码列表，逗号分隔，如"RB,CU"，为空时返回所有品种
 }
+
+
+/// 期货现货价格及基差数据（历史版本，包含180日统计）
+/// 对应 akshare 的 futures_spot_price_previous() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesSpotPricePrevious {
+    pub commodity: String,               // 商品名称
+    pub spot_price: f64,                 // 现货价格
+    pub dominant_contract: String,       // 主力合约代码
+    pub dominant_price: f64,             // 主力合约价格
+    pub basis: f64,                      // 主力合约基差
+    pub basis_rate: f64,                 // 主力合约基差率(%)
+    pub basis_180d_high: Option<f64>,    // 180日内主力基差最高
+    pub basis_180d_low: Option<f64>,     // 180日内主力基差最低
+    pub basis_180d_avg: Option<f64>,     // 180日内主力基差平均
+}
+
+/// 期货现货价格历史查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesSpotPricePreviousQuery {
+    pub date: String,  // 交易日期 YYYYMMDD
+}

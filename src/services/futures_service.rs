@@ -10,7 +10,7 @@ use crate::models::{
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
     FuturesFeesInfo, FuturesCommInfo, FuturesRule,
-    Futures99Symbol, FuturesInventory99, FuturesSpotPrice
+    Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -1829,6 +1829,191 @@ fn extract_contract_month(contract: &str) -> String {
     }
 }
 
+// ==================== 现货价格历史数据（sf2） ====================
+
+const SPOT_PRICE_PREVIOUS_URL: &str = "https://www.100ppi.com/sf2";
+
+/// 获取期货现货价格及基差历史数据（包含180日统计）
+/// 对应 akshare 的 futures_spot_price_previous() 函数
+/// 数据来源: https://www.100ppi.com/sf2/
+/// date: 交易日期，格式 YYYYMMDD
+pub async fn get_futures_spot_price_previous(date: &str) -> Result<Vec<FuturesSpotPricePrevious>> {
+    use scraper::{Html, Selector};
+    
+    // 格式化日期
+    let formatted_date = if date.len() == 8 {
+        format!("{}-{}-{}", &date[0..4], &date[4..6], &date[6..8])
+    } else {
+        date.to_string()
+    };
+    
+    let url = format!("{}/day-{}.html", SPOT_PRICE_PREVIOUS_URL, formatted_date);
+    println!("📡 请求现货价格历史数据 URL: {}", url);
+    
+    let client = Client::new();
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取现货价格历史数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    
+    // 解析HTML
+    let document = Html::parse_document(&text);
+    
+    // 查找ID为fdata的表格
+    let table_selector = Selector::parse("table#fdata").unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+    let td_selector = Selector::parse("td").unwrap();
+    
+    let mut spot_prices = Vec::new();
+    
+    let main_table = document.select(&table_selector).next();
+    if main_table.is_none() {
+        return Err(anyhow!("未找到数据表格(#fdata)"));
+    }
+    
+    let main_table = main_table.unwrap();
+    let rows: Vec<_> = main_table.select(&tr_selector).collect();
+    
+    for row in rows {
+        let cells: Vec<String> = row.select(&td_selector)
+            .map(|cell| cell.text().collect::<Vec<_>>().join("").trim().to_string())
+            .collect();
+        
+        // sf2页面的数据行有8列或更多
+        // 商品、现货价格、主力合约代码、主力合约价格、主力合约基差、180日最高、180日最低、180日平均
+        if cells.len() < 8 {
+            continue;
+        }
+        
+        let first_cell = cells[0].replace('\u{a0}', "").trim().to_string();
+        
+        // 跳过表头行和交易所分隔行
+        if first_cell.contains("交易所") || first_cell == "商品" || first_cell.is_empty() {
+            continue;
+        }
+        
+        // 解析现货价格
+        let spot_price = cells.get(1)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+        
+        if spot_price == 0.0 {
+            continue;
+        }
+        
+        // 主力合约代码
+        let dominant_contract = cells.get(2)
+            .map(|s| s.replace('\u{a0}', "").trim().to_string())
+            .unwrap_or_default();
+        
+        // 主力合约价格
+        let dominant_price = cells.get(3)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+        
+        // 主力合约基差（格式如 "-176-0.22%" 或 "80.03%"）
+        let basis_str = cells.get(4)
+            .map(|s| s.replace('\u{a0}', ""))
+            .unwrap_or_default();
+        
+        let (basis, basis_rate) = parse_basis_string(&basis_str);
+        
+        // 180日统计数据
+        let basis_180d_high = cells.get(5)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok());
+        
+        let basis_180d_low = cells.get(6)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok());
+        
+        let basis_180d_avg = cells.get(7)
+            .map(|s| s.replace('\u{a0}', "").replace(",", ""))
+            .and_then(|s| s.trim().parse::<f64>().ok());
+        
+        spot_prices.push(FuturesSpotPricePrevious {
+            commodity: first_cell,
+            spot_price,
+            dominant_contract,
+            dominant_price,
+            basis,
+            basis_rate,
+            basis_180d_high,
+            basis_180d_low,
+            basis_180d_avg,
+        });
+    }
+    
+    println!("📊 解析到 {} 条现货价格历史数据", spot_prices.len());
+    Ok(spot_prices)
+}
+
+/// 解析基差字符串，如 "-176-0.22%" 或 "80.03%"
+fn parse_basis_string(s: &str) -> (f64, f64) {
+    let s = s.trim();
+    
+    if s.is_empty() {
+        return (0.0, 0.0);
+    }
+    
+    // 查找百分号位置
+    if let Some(pct_pos) = s.rfind('%') {
+        let before_pct = &s[..pct_pos];
+        
+        // 尝试找到基差率的起始位置
+        // 格式可能是: "-176-0.22" 或 "80.03" 或 "2309.00"
+        // 从后往前找，找到基差率部分
+        
+        // 先尝试解析整个字符串为数字（只有基差率的情况）
+        if let Ok(rate) = before_pct.parse::<f64>() {
+            return (0.0, rate);
+        }
+        
+        // 否则尝试分离基差和基差率
+        // 查找最后一个负号或正号（不在开头的）
+        let chars: Vec<char> = before_pct.chars().collect();
+        let mut split_pos = None;
+        
+        for i in (1..chars.len()).rev() {
+            if chars[i] == '-' || chars[i] == '+' {
+                // 检查前一个字符是否是数字（确保这是分隔符而不是负号）
+                if i > 0 && chars[i-1].is_ascii_digit() {
+                    split_pos = Some(i);
+                    break;
+                }
+            }
+        }
+        
+        if let Some(pos) = split_pos {
+            let basis_str: String = chars[..pos].iter().collect();
+            let rate_str: String = chars[pos..].iter().collect();
+            
+            let basis = basis_str.parse::<f64>().unwrap_or(0.0);
+            let rate = rate_str.parse::<f64>().unwrap_or(0.0);
+            
+            return (basis, rate);
+        }
+        
+        // 如果没有找到分隔符，整个都是基差率
+        let rate = before_pct.parse::<f64>().unwrap_or(0.0);
+        return (0.0, rate);
+    }
+    
+    // 没有百分号，尝试直接解析为基差
+    let basis = s.parse::<f64>().unwrap_or(0.0);
+    (basis, 0.0)
+}
+
 /// 解析期货手续费HTML
 #[allow(dead_code)]
 fn parse_comm_info_html(html: &str, exchange_filter: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
@@ -3160,6 +3345,50 @@ mod tests {
             }
             Err(e) => {
                 println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取现货价格历史数据（包含180日统计）
+    #[tokio::test]
+    async fn test_futures_spot_price_previous() {
+        println!("\n========== 测试获取现货价格历史数据 ==========");
+        
+        // 测试获取历史数据
+        println!("\n  1. 测试获取历史数据（20240430）:");
+        match get_futures_spot_price_previous("20240430").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  前15条:");
+                println!("  {:<10} {:>10} {:>8} {:>10} {:>10} {:>8} {:>10} {:>10} {:>10}", 
+                    "商品", "现货价", "主力", "主力价", "基差", "基差率%", "180高", "180低", "180均");
+                for d in data.iter().take(15) {
+                    println!("  {:<10} {:>10.2} {:>8} {:>10.2} {:>10.2} {:>8.2} {:>10.2} {:>10.2} {:>10.2}", 
+                        d.commodity, d.spot_price, d.dominant_contract, d.dominant_price,
+                        d.basis, d.basis_rate,
+                        d.basis_180d_high.unwrap_or(0.0),
+                        d.basis_180d_low.unwrap_or(0.0),
+                        d.basis_180d_avg.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试较早日期
+        println!("\n  2. 测试获取较早日期（20230601）:");
+        match get_futures_spot_price_previous("20230601").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in data.iter().take(5) {
+                    println!("    【{}】现货:{:.2} 主力:{} 基差:{:.2} 180日均值:{:.2}", 
+                        d.commodity, d.spot_price, d.dominant_contract, 
+                        d.basis, d.basis_180d_avg.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败: {}", e);
             }
         }
     }
