@@ -2,7 +2,6 @@ use anyhow::{Result, anyhow};
 use chrono::Utc;
 use chrono_tz::Asia::Shanghai;
 use reqwest::Client;
-use regex::Regex;
 use crate::models::{FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange};
 
 // 获取北京时间
@@ -28,7 +27,8 @@ impl FuturesService {
     pub async fn get_futures_info(&self, symbol: &str) -> Result<FuturesInfo> {
         let formatted_symbol = self.format_symbol_for_realtime(symbol);
         let rn_code = self.generate_random_code();
-        let url = format!("{}?rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, formatted_symbol);
+        // 注意：URL格式是 /rn= 而不是 ?rn=，这是新浪API的特殊格式
+        let url = format!("{}/rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, formatted_symbol);
         
         let response = self.client
             .get(&url)
@@ -60,7 +60,8 @@ impl FuturesService {
         
         let symbols_str = formatted_symbols.join(",");
         let rn_code = self.generate_random_code();
-        let url = format!("{}?rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, symbols_str);
+        // 注意：URL格式是 /rn= 而不是 ?rn=，这是新浪API的特殊格式
+        let url = format!("{}/rn={}&list={}", SINA_FUTURES_REALTIME_API, rn_code, symbols_str);
         
         let response = self.client
             .get(&url)
@@ -186,19 +187,24 @@ impl FuturesService {
     }
 
     // 格式化期货合约代码为新浪实时数据格式
+    // akshare使用小写nf_前缀，金融期货使用CFF_前缀
     fn format_symbol_for_realtime(&self, symbol: &str) -> String {
         let symbol_upper = symbol.to_uppercase();
         
-        // 如果已经是新浪格式，直接返回
-        if symbol_upper.starts_with("NF_") || symbol_upper.starts_with("CFF_") {
-            return symbol_upper;
+        // 如果已经是新浪格式，直接返回（转为小写）
+        if symbol_upper.starts_with("NF_") {
+            return format!("nf_{}", &symbol_upper[3..]);
+        }
+        if symbol_upper.starts_with("CFF_") {
+            return format!("CFF_{}", &symbol_upper[4..]);
         }
         
         // 根据合约代码判断交易所并添加前缀
+        // 金融期货使用CFF_前缀，商品期货使用nf_前缀（小写）
         if self.is_cffex_symbol(&symbol_upper) {
             format!("CFF_{}", symbol_upper)
         } else {
-            format!("NF_{}", symbol_upper)
+            format!("nf_{}", symbol_upper)
         }
     }
 
@@ -221,72 +227,92 @@ impl FuturesService {
     }
 
     // 解析新浪期货实时数据
-    // 数据格式: var hq_str_nf_CU2405="铜2405,62970,62830,63200,63200,62830,62970,62980,446224,28089671840,62970,1,62960,2,62950,1,62980,1,62990,1,63000,1,63010,1,2024-03-15,15:00:00,00";
-    // 字段说明: [0]名称,[1]昨结算,[2]开盘,[3]最高,[4]最低,[5]昨收,[6]买价,[7]卖价,[8]最新价,[9]结算价,[10]昨结算,[11]买量,[12]卖量,[13]持仓,[14]成交量
+    // 根据akshare的实现，商品期货(CF)数据格式:
+    // var hq_str_nf_V2309="PVC2309,09:00:00,6500,6520,6480,6490,6495,6500,6498,6499,6490,100,200,50000,100000,...";
+    // 字段顺序: [0]名称,[1]时间,[2]开盘,[3]最高,[4]最低,[5]昨收,[6]买价,[7]卖价,[8]最新价,[9]均价,[10]昨结算,[11]买量,[12]卖量,[13]持仓,[14]成交量
     fn parse_sina_realtime_data(&self, data: &str, original_symbol: &str) -> Result<FuturesInfo> {
         // 检查数据是否为空
-        if data.trim().is_empty() || data.contains("\"\"") {
+        if data.trim().is_empty() || data.contains(r#"="";") || data.contains(r#"="";"#) {
             return Err(anyhow!("Empty data returned from API"));
         }
 
-        let re = Regex::new(r#"var hq_str_[^=]+=["']([^"']+)["']"#).unwrap();
-        let caps = re.captures(data)
-            .ok_or_else(|| anyhow!("Invalid data format: no match found in: {}", data))?;
-        
-        let data_part = caps.get(1)
-            .ok_or_else(|| anyhow!("Invalid data format: no data part"))?
-            .as_str();
-        
-        let fields: Vec<&str> = data_part.split(',').collect();
-        
-        if fields.len() < 15 {
-            return Err(anyhow!("Insufficient data fields: got {}, expected at least 15. Data: {}", fields.len(), data_part));
+        // 解析数据：var hq_str_nf_XXX="data1,data2,...";
+        // 按分号分割多条数据，取第一条
+        for item in data.split(';') {
+            let item = item.trim();
+            if item.is_empty() {
+                continue;
+            }
+            
+            // 分割等号，获取数据部分
+            let parts: Vec<&str> = item.split('=').collect();
+            if parts.len() < 2 {
+                continue;
+            }
+            
+            let data_part = parts[1].trim_matches('"').trim_matches('\'');
+            if data_part.is_empty() {
+                continue;
+            }
+            
+            let fields: Vec<&str> = data_part.split(',').collect();
+            
+            if fields.len() < 15 {
+                return Err(anyhow!("Insufficient data fields: got {}, expected at least 15. Data: {}", fields.len(), data_part));
+            }
+
+            // 按照akshare的字段顺序解析
+            let name = fields[0].to_string();
+            let open = fields[2].parse::<f64>().unwrap_or(0.0);
+            let high = fields[3].parse::<f64>().unwrap_or(0.0);
+            let low = fields[4].parse::<f64>().unwrap_or(0.0);
+            let current_price = fields[8].parse::<f64>().unwrap_or(0.0);
+            let prev_settlement = fields[10].parse::<f64>().unwrap_or(0.0);
+            let open_interest = fields[13].parse::<u64>().ok();
+            let volume = fields[14].parse::<u64>().unwrap_or(0);
+
+            let change = current_price - prev_settlement;
+            let change_percent = if prev_settlement != 0.0 {
+                (change / prev_settlement) * 100.0
+            } else {
+                0.0
+            };
+
+            let beijing_time = get_beijing_time();
+
+            return Ok(FuturesInfo {
+                symbol: original_symbol.to_string(),
+                name,
+                current_price,
+                change,
+                change_percent,
+                volume,
+                open,
+                high,
+                low,
+                settlement: None,
+                prev_settlement: Some(prev_settlement),
+                open_interest,
+                updated_at: beijing_time.to_rfc3339(),
+            });
         }
-
-        let name = fields[0].to_string();
-        let open = fields[2].parse::<f64>().unwrap_or(0.0);
-        let high = fields[3].parse::<f64>().unwrap_or(0.0);
-        let low = fields[4].parse::<f64>().unwrap_or(0.0);
-        let current_price = fields[8].parse::<f64>().unwrap_or(0.0);
-        let settlement = fields[9].parse::<f64>().ok();
-        let prev_settlement = fields[10].parse::<f64>().unwrap_or(0.0);
-        let open_interest = fields[13].parse::<u64>().ok();
-        let volume = fields[14].parse::<u64>().unwrap_or(0);
-
-        let change = current_price - prev_settlement;
-        let change_percent = if prev_settlement != 0.0 {
-            (change / prev_settlement) * 100.0
-        } else {
-            0.0
-        };
-
-        let beijing_time = get_beijing_time();
-
-        Ok(FuturesInfo {
-            symbol: original_symbol.to_string(),
-            name,
-            current_price,
-            change,
-            change_percent,
-            volume,
-            open,
-            high,
-            low,
-            settlement,
-            prev_settlement: Some(prev_settlement),
-            open_interest,
-            updated_at: beijing_time.to_rfc3339(),
-        })
+        
+        Err(anyhow!("No valid data found in response: {}", data))
     }
 
     // 解析多个期货合约实时数据
+    // akshare的解析方式：按分号分割，然后按等号分割获取数据
     fn parse_multiple_realtime_data(&self, data: &str, original_symbols: &[String]) -> Result<Vec<FuturesInfo>> {
         let mut results = Vec::new();
-        let lines: Vec<&str> = data.lines().collect();
         
-        for (i, line) in lines.iter().enumerate() {
-            if i < original_symbols.len() && !line.trim().is_empty() {
-                match self.parse_sina_realtime_data(line, &original_symbols[i]) {
+        // 按分号分割多条数据
+        let items: Vec<&str> = data.split(';')
+            .filter(|s| !s.trim().is_empty())
+            .collect();
+        
+        for (i, item) in items.iter().enumerate() {
+            if i < original_symbols.len() {
+                match self.parse_sina_realtime_data(item, &original_symbols[i]) {
                     Ok(futures_info) => results.push(futures_info),
                     Err(e) => {
                         log::warn!("Failed to parse data for {}: {}", original_symbols[i], e);
