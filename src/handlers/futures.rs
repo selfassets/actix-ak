@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, Result};
-use crate::models::{ApiResponse, FuturesInfo, FuturesHistoryData, FuturesQuery};
-use crate::services::futures_service::FuturesService;
+use crate::models::{
+    ApiResponse, FuturesInfo, FuturesHiuturesService;
 
 pub async fn get_futures_info(path: web::Path<String>) -> Result<HttpResponse> {
     let symbol = path.into_inner();
@@ -37,7 +37,7 @@ pub async fn get_futures_history(
 }
 
 pub async fn list_futures(query: web::Query<FuturesQuery>) -> Result<HttpResponse> {
-    let service = FuturesService::new();
+    let mut service = FuturesService::new();
     
     match service.list_main_futures(&query).await {
         Ok(futures_list) => {
