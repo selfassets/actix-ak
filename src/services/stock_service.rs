@@ -1,14 +1,28 @@
+//! 股票数据服务
+//! 
+//! 提供股票数据的获取和处理逻辑
+//! 注意：当前为模拟数据，实际应用中需要对接真实数据源
+
 use anyhow::Result;
 use chrono::Utc;
 use chrono_tz::Asia::Shanghai;
 use crate::models::{StockInfo, StockHistoryData, StockQuery};
 
-// 获取北京时间字符串（带+08:00时区）
+/// 获取北京时间字符串（ISO 8601 格式，带+08:00时区）
 fn get_beijing_time() -> String {
     Utc::now().with_timezone(&Shanghai).to_rfc3339()
 }
 
-// 模拟股票数据服务 - 在实际应用中，这里会连接到真实的数据源
+/// 获取单只股票信息
+/// 
+/// # 参数
+/// - symbol: 股票代码
+/// 
+/// # 返回
+/// 股票实时行情数据
+/// 
+/// # 注意
+/// 当前返回模拟数据，实际应用中需要对接真实数据源
 pub async fn get_stock_info(symbol: &str) -> Result<StockInfo> {
     // 模拟数据 - 实际应用中会从数据源获取
     let beijing_time = get_beijing_time();
@@ -26,6 +40,14 @@ pub async fn get_stock_info(symbol: &str) -> Result<StockInfo> {
     Ok(stock_info)
 }
 
+/// 获取股票历史K线数据
+/// 
+/// # 参数
+/// - symbol: 股票代码
+/// - query: 查询参数（包含 limit 等）
+/// 
+/// # 返回
+/// 历史K线数据列表
 pub async fn get_stock_history(symbol: &str, query: &StockQuery) -> Result<Vec<StockHistoryData>> {
     // 模拟历史数据
     let mut history = Vec::new();
@@ -50,6 +72,13 @@ pub async fn get_stock_history(symbol: &str, query: &StockQuery) -> Result<Vec<S
     Ok(history)
 }
 
+/// 获取股票列表
+/// 
+/// # 参数
+/// - query: 查询参数（包含 limit 等）
+/// 
+/// # 返回
+/// 股票信息列表
 pub async fn list_stocks(query: &StockQuery) -> Result<Vec<StockInfo>> {
     // 模拟股票列表
     let symbols = vec!["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"];
@@ -74,15 +103,19 @@ pub async fn list_stocks(query: &StockQuery) -> Result<Vec<StockInfo>> {
     Ok(stocks)
 }
 
-// 实际应用中的数据获取函数示例
+/// 从真实数据源获取股票数据（示例）
+/// 
+/// # 参数
+/// - symbol: 股票代码
+/// 
+/// # 注意
+/// 这是一个示例函数，展示如何对接真实的股票数据 API
+/// 可以集成 Alpha Vantage、Yahoo Finance 等数据提供商
 #[allow(dead_code)]
 async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
-    // 这里可以集成真实的股票数据API
-    // 例如：Alpha Vantage, Yahoo Finance, 或其他金融数据提供商
-    
     let client = reqwest::Client::new();
     
-    // 示例API调用（需要替换为真实的API）
+    // 示例 API 调用（需要替换为真实的 API）
     let url = format!("https://api.example.com/stock/{}", symbol);
     
     let response = client
@@ -92,7 +125,7 @@ async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
         .await?;
     
     if response.status().is_success() {
-        // 解析响应并转换为StockInfo
+        // 解析响应并转换为 StockInfo
         // let data: ExternalApiResponse = response.json().await?;
         // Ok(convert_to_stock_info(data))
         
@@ -109,6 +142,6 @@ async fn fetch_real_stock_data(symbol: &str) -> Result<StockInfo> {
             updated_at: beijing_time,
         })
     } else {
-        Err(anyhow::anyhow!("Failed to fetch stock data: {}", response.status()))
+        Err(anyhow::anyhow!("获取股票数据失败: {}", response.status()))
     }
 }
