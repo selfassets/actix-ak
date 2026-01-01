@@ -2808,16 +2808,16 @@ pub async fn get_cffex_rank_table(date: &str, vars_list: Option<Vec<&str>>) -> R
 /// 数据来源: https://www.czce.com.cn/cn/jysj/ccpm/H077003004index_1.htm
 /// date: 交易日期，格式 YYYYMMDD，数据从 20151008 开始
 pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
-    use calamine::Reader;
+    use calamine::{Reader, open_workbook_auto_from_rs};
     
     let client = Client::new();
     
     // 根据日期选择文件格式
     let year = &date[..4];
     let url = if date >= "20251102" {
-        format!("{}/{}/{}/FutureDataHolding.xlsx", CZCE_VOL_RANK_URL, year, date)
+        format!("https://www.czce.com.cn/cn/DFSStaticFiles/Future/{}/{}/FutureDataHolding.xlsx", year, date)
     } else {
-        format!("{}/{}/{}/FutureDataHolding.xls", CZCE_VOL_RANK_URL, year, date)
+        format!("https://www.czce.com.cn/cn/DFSStaticFiles/Future/{}/{}/FutureDataHolding.xls", year, date)
     };
     
     println!("📡 请求郑商所持仓排名数据 URL: {}", url);
@@ -2834,11 +2834,11 @@ pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
 
     let bytes = response.bytes().await?;
     
-    // 使用calamine解析Excel文件
+    // 使用calamine自动检测格式解析Excel文件
     use std::io::Cursor;
     let cursor = Cursor::new(bytes.as_ref());
     
-    let mut workbook: calamine::Xlsx<_> = calamine::open_workbook_from_rs(cursor)
+    let mut workbook = open_workbook_auto_from_rs(cursor)
         .map_err(|e| anyhow!("打开Excel文件失败: {}", e))?;
     
     // 获取第一个工作表
