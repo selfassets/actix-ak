@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{Result, anyhow};
 use chrono::Utc;
 use chrono_tz::Asia::Shanghai;
@@ -13,8 +15,10 @@ use crate::models::{
     Futures99Symbol, FuturesInventory99, FuturesSpotPrice, FuturesSpotPricePrevious,
     PositionRankData, RankTableResponse, RankSum,
     CzceWarehouseReceipt, CzceWarehouseReceiptResponse,
+    DceWarehouseReceipt,
     ShfeWarehouseReceipt, ShfeWarehouseReceiptResponse,
-    GfexWarehouseReceipt, GfexWarehouseReceiptResponse
+    GfexWarehouseReceipt, GfexWarehouseReceiptResponse,
+    SinaHoldPosition
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -2583,18 +2587,23 @@ fn parse_hold_pos_html(html: &str, table_index: usize, pos_type: &str) -> Result
 
 // ==================== 期货持仓排名表（交易所数据） ====================
 
+#[allow(dead_code)]
 /// 上海期货交易所会员成交及持仓排名表API
 const SHFE_VOL_RANK_URL: &str = "https://www.shfe.com.cn/data/tradedata/future/dailydata/pm";
 
+#[allow(dead_code)]
 /// 中国金融期货交易所持仓排名API
 const CFFEX_VOL_RANK_URL: &str = "http://www.cffex.com.cn/sj/ccpm";
 
+#[allow(dead_code)]
 /// 郑州商品交易所持仓排名API
 const CZCE_VOL_RANK_URL: &str = "http://www.czce.com.cn/cn/DFSStaticFiles/Future";
 
+#[allow(dead_code)]
 /// 大连商品交易所持仓排名API
 const DCE_VOL_RANK_URL: &str = "http://www.dce.com.cn/dcereport/publicweb/dailystat/memberDealPosi/batchDownload";
 
+#[allow(dead_code)]
 /// 从合约代码中提取品种代码
 fn extract_variety(symbol: &str) -> String {
     let re = Regex::new(r"^([A-Za-z]+)").unwrap();
@@ -2604,6 +2613,7 @@ fn extract_variety(symbol: &str) -> String {
         .unwrap_or_default()
 }
 
+#[allow(dead_code)]
 /// 获取上海期货交易所会员成交及持仓排名表
 /// 对应 akshare 的 get_shfe_rank_table() 函数
 /// 数据来源: https://www.shfe.com.cn/
@@ -3930,6 +3940,98 @@ pub async fn futures_warehouse_receipt_dce(date: &str) -> Result<Vec<DceWarehous
 }
 
 
+/// 上海期货交易所-指定交割仓库期货仓单日报
+/// 对应 akshare 的 futures_shfe_warehouse_receipt() 函数
+/// 数据来源: https://www.shfe.com.cn/data/tradedata/future/dailydata/{date}dailystock.dat
+/// 
+/// date: 交易日期，格式 YYYYMMDD（数据从 20140519 开始）
+pub async fn futures_shfe_warehouse_receipt(date: &str) -> Result<Vec<ShfeWarehouseReceiptResponse>> {
+    let client = Client::new();
+    
+    let url = format!(
+        "https://www.shfe.com.cn/data/tradedata/future/dailydata/{}dailystock.dat",
+        date
+    );
+    
+    println!("📡 请求上期所仓单日报 URL: {}", url);
+    
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Referer", "https://www.shfe.com.cn/")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取上期所仓单日报数据失败: {}，可能是非交易日或日期格式错误", response.status()));
+    }
+
+    let json_data: serde_json::Value = response.json().await?;
+    
+    // 解析 o_cursor 数组
+    let o_cursor = json_data["o_cursor"].as_array()
+        .ok_or_else(|| anyhow!("未找到o_cursor数据"))?;
+    
+    // 按品种分组
+    let mut grouped: std::collections::HashMap<String, Vec<ShfeWarehouseReceipt>> = std::collections::HashMap::new();
+    
+    for item in o_cursor {
+        // 品种名称，去除 $ 后面的内容
+        let var_name = item["VARNAME"].as_str().unwrap_or("")
+            .split('$').next().unwrap_or("").trim().to_string();
+        
+        if var_name.is_empty() {
+            continue;
+        }
+        
+        // 地区名称，去除 $ 后面的内容
+        let reg_name = item["REGNAME"].as_str().unwrap_or("")
+            .split('$').next().unwrap_or("").trim().to_string();
+        
+        // 仓库简称，去除 $ 后面的内容
+        let wh_name = item["WHABBRNAME"].as_str().unwrap_or("")
+            .split('$').next().unwrap_or("").trim().to_string();
+        
+        // 解析数值字段
+        let last_receipt = item["WRTWGHTS"].as_i64()
+            .or_else(|| item["WRTWGHTS"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        let today_receipt = item["WRTQTY"].as_i64()
+            .or_else(|| item["WRTQTY"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        let change = item["WRTCHANGE"].as_i64()
+            .or_else(|| item["WRTCHANGE"].as_str().and_then(|s| s.parse().ok()))
+            .unwrap_or(0);
+        
+        // 单位
+        let unit = item["UNIT"].as_str().unwrap_or("").to_string();
+        
+        let receipt = ShfeWarehouseReceipt {
+            variety: var_name.clone(),
+            region: reg_name,
+            warehouse: wh_name,
+            last_receipt,
+            today_receipt,
+            change,
+            unit,
+        };
+        
+        grouped.entry(var_name).or_insert_with(Vec::new).push(receipt);
+    }
+    
+    // 转换为响应格式
+    let mut result: Vec<ShfeWarehouseReceiptResponse> = grouped.into_iter()
+        .map(|(symbol, data)| ShfeWarehouseReceiptResponse { symbol, data })
+        .collect();
+    
+    // 按品种名称排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个品种的仓单日报数据", result.len());
+    Ok(result)
+}
+
+
 /// 广州期货交易所-行情数据-仓单日报
 /// 对应 akshare 的 futures_gfex_warehouse_receipt() 函数
 /// 数据来源: http://www.gfex.com.cn/gfex/cdrb/hqsj_tjsj.shtml
@@ -4027,6 +4129,106 @@ pub async fn futures_gfex_warehouse_receipt(date: &str) -> Result<Vec<GfexWareho
     result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
     
     println!("📊 解析到 {} 个品种的仓单日报数据", result.len());
+    Ok(result)
+}
+
+
+// ==================== 新浪期货持仓排名 ====================
+
+/// 新浪财经-期货-成交持仓排名
+/// 对应 akshare 的 futures_hold_pos_sina() 函数
+/// 数据来源: https://vip.stock.finance.sina.com.cn/q/view/vFutures_Positions_cjcc.php
+/// 
+/// symbol: 数据类型，可选 "成交量"/"多单持仓"/"空单持仓" 或 "volume"/"long"/"short"
+/// contract: 期货合约代码，如 "OI2501", "IC2403"
+/// date: 查询日期，格式 YYYYMMDD
+pub async fn futures_hold_pos_sina(symbol: &str, contract: &str, date: &str) -> Result<Vec<SinaHoldPosition>> {
+    use crate::models::SinaHoldPosType;
+    
+    let pos_type = SinaHoldPosType::from_str(symbol)
+        .ok_or_else(|| anyhow!("无效的symbol参数: {}，可选: 成交量/多单持仓/空单持仓", symbol))?;
+    
+    let client = Client::new();
+    
+    // 格式化日期为 YYYY-MM-DD
+    let formatted_date = format!("{}-{}-{}", &date[0..4], &date[4..6], &date[6..8]);
+    
+    let url = "https://vip.stock.finance.sina.com.cn/q/view/vFutures_Positions_cjcc.php";
+    
+    println!("📡 请求新浪期货持仓数据 URL: {}?t_breed={}&t_date={}", url, contract, formatted_date);
+    
+    let response = client
+        .get(url)
+        .query(&[("t_breed", contract), ("t_date", &formatted_date)])
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Referer", "https://vip.stock.finance.sina.com.cn/")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取新浪期货持仓数据失败: {}", response.status()));
+    }
+
+    // 使用GBK编码读取
+    let bytes = response.bytes().await?;
+    let html = encoding_rs::GBK.decode(&bytes).0.to_string();
+    
+    // 解析HTML表格
+    let document = scraper::Html::parse_document(&html);
+    let table_selector = scraper::Selector::parse("table").unwrap();
+    let tables: Vec<_> = document.select(&table_selector).collect();
+    
+    let table_index = pos_type.table_index();
+    if tables.len() <= table_index {
+        return Err(anyhow!("未找到数据表格，可能是非交易日或合约不存在"));
+    }
+    
+    let target_table = tables[table_index];
+    let row_selector = scraper::Selector::parse("tr").unwrap();
+    let cell_selector = scraper::Selector::parse("td").unwrap();
+    
+    let mut result: Vec<SinaHoldPosition> = Vec::new();
+    
+    for row in target_table.select(&row_selector) {
+        let cells: Vec<_> = row.select(&cell_selector).collect();
+        
+        if cells.len() < 3 {
+            continue;
+        }
+        
+        // 获取单元格文本
+        let rank_text = cells[0].text().collect::<String>().trim().to_string();
+        let company_text = cells[1].text().collect::<String>().trim().to_string();
+        let value_text = cells[2].text().collect::<String>().trim().replace(",", "");
+        let change_text = if cells.len() > 3 {
+            cells[3].text().collect::<String>().trim().replace(",", "")
+        } else {
+            "0".to_string()
+        };
+        
+        // 跳过表头和合计行
+        let rank: i32 = match rank_text.parse() {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        
+        // 跳过合计行（通常名次为0或负数）
+        if rank <= 0 {
+            continue;
+        }
+        
+        let value: i64 = value_text.parse().unwrap_or(0);
+        let change: i64 = change_text.parse().unwrap_or(0);
+        
+        result.push(SinaHoldPosition {
+            rank,
+            company: company_text,
+            value,
+            change,
+        });
+    }
+    
+    println!("📊 解析到 {} 条持仓排名数据", result.len());
     Ok(result)
 }
 
@@ -5891,6 +6093,136 @@ mod tests {
             }
             Err(e) => {
                 println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取上期所仓单日报数据
+    #[tokio::test]
+    async fn test_futures_shfe_warehouse_receipt() {
+        println!("\n========== 测试获取上期所仓单日报数据 ==========");
+        
+        // 测试获取仓单日报
+        println!("\n  1. 测试获取仓单日报（20251226）:");
+        match futures_shfe_warehouse_receipt("20251226").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n    品种: {}", item.symbol);
+                    for row in item.data.iter().take(3) {
+                        println!("      {} - {} 昨日:{} 今日:{} 增减:{} {}", 
+                            row.region, row.warehouse,
+                            row.last_receipt, row.today_receipt, row.change, row.unit);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取较早日期
+        println!("\n  2. 测试获取较早日期（20240701）:");
+        match futures_shfe_warehouse_receipt("20240701").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                // 只显示品种列表
+                let symbols: Vec<&str> = data.iter().map(|d| d.symbol.as_str()).collect();
+                println!("    品种列表: {:?}", symbols);
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取广期所仓单日报数据
+    #[tokio::test]
+    async fn test_futures_gfex_warehouse_receipt() {
+        println!("\n========== 测试获取广期所仓单日报数据 ==========");
+        
+        // 测试获取仓单日报
+        println!("\n  1. 测试获取仓单日报（20251226）:");
+        match futures_gfex_warehouse_receipt("20251226").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                for item in data.iter().take(5) {
+                    println!("\n    品种: {}", item.symbol);
+                    for row in item.data.iter().take(3) {
+                        println!("      {} - {} 昨日:{} 今日:{} 增减:{}", 
+                            row.variety, row.warehouse,
+                            row.last_receipt, row.today_receipt, row.change);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取较早日期
+        println!("\n  2. 测试获取较早日期（20240701）:");
+        match futures_gfex_warehouse_receipt("20240701").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个品种", data.len());
+                // 只显示品种列表
+                let symbols: Vec<&str> = data.iter().map(|d| d.symbol.as_str()).collect();
+                println!("    品种列表: {:?}", symbols);
+            }
+            Err(e) => {
+                println!("  ⚠️ 获取失败（可能是非交易日）: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取新浪期货持仓排名数据（新版）
+    #[tokio::test]
+    async fn test_futures_hold_pos_sina_v2() {
+        println!("\n========== 测试获取新浪期货持仓排名数据（新版） ==========");
+        
+        // 测试获取成交量排名
+        println!("\n  1. 测试获取成交量排名（OI2501）:");
+        match futures_hold_pos_sina("成交量", "OI2501", "20241016").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  {:<6} {:<15} {:>12} {:>12}", "名次", "期货公司", "成交量", "增减");
+                for row in data.iter().take(10) {
+                    println!("  {:<6} {:<15} {:>12} {:>12}", 
+                        row.rank, row.company, row.value, row.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取多单持仓排名
+        println!("\n  2. 测试获取多单持仓排名（OI2501）:");
+        match futures_hold_pos_sina("多单持仓", "OI2501", "20241016").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for row in data.iter().take(5) {
+                    println!("    {} - {} 多单:{} 增减:{}", 
+                        row.rank, row.company, row.value, row.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取空单持仓排名
+        println!("\n  3. 测试获取空单持仓排名（OI2501）:");
+        match futures_hold_pos_sina("空单持仓", "OI2501", "20241016").await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for row in data.iter().take(5) {
+                    println!("    {} - {} 空单:{} 增减:{}", 
+                        row.rank, row.company, row.value, row.change);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
             }
         }
     }

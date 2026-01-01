@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -443,9 +445,11 @@ pub struct DceWarehouseReceipt {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ShfeWarehouseReceipt {
     pub variety: String,                     // 品种名称
+    pub region: String,                      // 地区名称
     pub warehouse: String,                   // 仓库简称
-    pub warehouse_receipt: i64,              // 仓单数量
-    pub warehouse_receipt_chg: i64,          // 仓单增减
+    pub last_receipt: i64,                   // 昨日仓单量
+    pub today_receipt: i64,                  // 今日仓单量
+    pub change: i64,                         // 仓单增减
     pub unit: String,                        // 单位
 }
 
@@ -473,4 +477,50 @@ pub struct GfexWarehouseReceipt {
 pub struct GfexWarehouseReceiptResponse {
     pub symbol: String,                      // 品种代码
     pub data: Vec<GfexWarehouseReceipt>,     // 仓单数据列表
+}
+
+
+/// 新浪期货持仓排名数据
+/// 对应 akshare 的 futures_hold_pos_sina() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SinaHoldPosition {
+    pub rank: i32,                           // 名次
+    pub company: String,                     // 期货公司
+    pub value: i64,                          // 数值（成交量/多单持仓/空单持仓）
+    pub change: i64,                         // 比上交易日增减
+}
+
+/// 新浪期货持仓类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinaHoldPosType {
+    Volume,     // 成交量
+    Long,       // 多单持仓
+    Short,      // 空单持仓
+}
+
+impl SinaHoldPosType {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "成交量" | "volume" | "vol" => Some(Self::Volume),
+            "多单持仓" | "多单" | "long" => Some(Self::Long),
+            "空单持仓" | "空单" | "short" => Some(Self::Short),
+            _ => None,
+        }
+    }
+    
+    pub fn table_index(&self) -> usize {
+        match self {
+            Self::Volume => 2,
+            Self::Long => 3,
+            Self::Short => 4,
+        }
+    }
+    
+    pub fn value_column_name(&self) -> &'static str {
+        match self {
+            Self::Volume => "成交量",
+            Self::Long => "多单持仓",
+            Self::Short => "空单持仓",
+        }
+    }
 }
