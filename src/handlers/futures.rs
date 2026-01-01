@@ -5,14 +5,16 @@ use crate::models::{
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     FuturesHoldPosQuery, FuturesMainQuery,
     ForeignFuturesHistData, ForeignFuturesDetail, FuturesFeesInfo,
-    FuturesCommInfo, FuturesCommQuery, FuturesRule, FuturesRuleQuery
+    FuturesCommInfo, FuturesCommQuery, FuturesRule, FuturesRuleQuery,
+    Futures99Symbol, FuturesInventory99, FuturesInventory99Query
 };
 use crate::services::futures_service::{
     FuturesService, get_futures_history, get_futures_minute_data,
     get_foreign_futures_symbols, get_foreign_futures_realtime,
     get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina,
     get_futures_foreign_hist, get_futures_foreign_detail, get_futures_fees_info,
-    get_futures_comm_info, get_futures_rule
+    get_futures_comm_info, get_futures_rule,
+    get_99_symbol_map, get_futures_inventory_99
 };
 
 /// 获取单个期货合约实时数据
@@ -397,6 +399,37 @@ pub async fn get_rule(query: web::Query<FuturesRuleQuery>) -> Result<HttpRespons
     }
 }
 
+/// 获取99期货网品种映射表
+/// GET /futures/inventory99/symbols
+pub async fn get_inventory99_symbols() -> Result<HttpResponse> {
+    match get_99_symbol_map().await {
+        Ok(symbols) => {
+            let response = ApiResponse::success(symbols);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<Vec<Futures99Symbol>>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
+/// 获取99期货网库存数据
+/// GET /futures/inventory99?symbol=豆一
+/// 对应 akshare 的 futures_inventory_99()
+pub async fn get_inventory99(query: web::Query<FuturesInventory99Query>) -> Result<HttpResponse> {
+    match get_futures_inventory_99(&query.symbol).await {
+        Ok(data) => {
+            let response = ApiResponse::success(data);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<Vec<FuturesInventory99>>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
 /// 配置期货相关路由
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -411,6 +444,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/fees", web::get().to(get_fees_info))
             .route("/comm_info", web::get().to(get_comm_info))
             .route("/rule", web::get().to(get_rule))
+            // 99期货网库存数据
+            .route("/inventory99", web::get().to(get_inventory99))
+            .route("/inventory99/symbols", web::get().to(get_inventory99_symbols))
             // 主力连续合约
             .route("/main/display", web::get().to(get_display_main_contracts))
             .route("/main/{symbol}/daily", web::get().to(get_main_daily))

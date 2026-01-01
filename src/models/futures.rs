@@ -233,3 +233,28 @@ pub struct FuturesFeesInfo {
     pub short_margin_rate: String,     // 做空保证金率
     pub updated_at: String,            // 更新时间
 }
+
+
+/// 99期货网品种信息
+/// 用于品种代码映射
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Futures99Symbol {
+    pub product_id: i64,      // 品种ID
+    pub name: String,         // 品种名称（中文）
+    pub code: String,         // 品种代码
+}
+
+/// 99期货网库存数据
+/// 对应 akshare 的 futures_inventory_99() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesInventory99 {
+    pub date: String,         // 日期
+    pub close_price: Option<f64>,  // 收盘价
+    pub inventory: Option<f64>,    // 库存
+}
+
+/// 99期货网库存查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesInventory99Query {
+    pub symbol: String,  // 品种名称或代码，如"豆一"或"A"
+}
