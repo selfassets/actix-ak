@@ -8,7 +8,8 @@ use crate::models::{
     FuturesInfo, FuturesHistoryData, FuturesQuery, FuturesExchange,
     FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol,
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
-    ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem
+    ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
+    FuturesFeesInfo
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -1124,6 +1125,101 @@ fn parse_foreign_detail_html(html: &str) -> Result<ForeignFuturesDetail> {
     
     println!("📊 解析到 {} 条合约详情项", items.len());
     Ok(ForeignFuturesDetail { items })
+}
+
+
+// ==================== 期货交易费用相关 ====================
+
+/// OpenCTP期货交易费用API
+const OPENCTP_FEES_URL: &str = "http://openctp.cn/fees.html";
+
+/// 获取期货交易费用参照表
+/// 对应 akshare 的 futures_fees_info() 函数
+/// 数据来源: http://openctp.cn/fees.html
+pub async fn get_futures_fees_info() -> Result<Vec<FuturesFeesInfo>> {
+    let client = Client::new();
+    
+    println!("📡 请求期货交易费用数据 URL: {}", OPENCTP_FEES_URL);
+    
+    let response = client
+        .get(OPENCTP_FEES_URL)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取期货交易费用数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    parse_fees_html(&text)
+}
+
+/// 解析期货交易费用HTML
+fn parse_fees_html(html: &str) -> Result<Vec<FuturesFeesInfo>> {
+    let mut fees_list = Vec::new();
+    
+    // 提取更新时间
+    let time_re = Regex::new(r"Generated at ([^.]+)\.").unwrap();
+    let updated_at = time_re.captures(html)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+        .unwrap_or_else(|| "未知".to_string());
+    
+    println!("📅 数据更新时间: {}", updated_at);
+    
+    // 查找表格
+    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
+    let table_match = table_re.captures(html);
+    
+    if table_match.is_none() {
+        return Err(anyhow!("未找到费用数据表格"));
+    }
+    
+    let table_content = table_match.unwrap().get(1).map(|m| m.as_str()).unwrap_or("");
+    
+    // 解析表格行
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    let cell_re = Regex::new(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>").unwrap();
+    
+    // 清理HTML标签
+    let clean_html = |s: &str| -> String {
+        let tag_re = Regex::new(r"<[^>]+>").unwrap();
+        tag_re.replace_all(s, "").trim().to_string()
+    };
+    
+    let mut is_header = true;
+    for row_cap in row_re.captures_iter(table_content) {
+        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        let cells: Vec<_> = cell_re.captures_iter(row_content)
+            .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+            .collect();
+        
+        // 跳过表头
+        if is_header {
+            is_header = false;
+            continue;
+        }
+        
+        // 期望的列: 交易所, 品种, 合约, 合约乘数, 最小变动价位, 保证金率, 开仓手续费, 平仓手续费, 平今手续费
+        if cells.len() >= 9 {
+            fees_list.push(FuturesFeesInfo {
+                exchange: cells[0].clone(),
+                product: cells[1].clone(),
+                contract: cells[2].clone(),
+                contract_size: cells[3].clone(),
+                price_tick: cells[4].clone(),
+                margin_rate: cells[5].clone(),
+                open_fee: cells[6].clone(),
+                close_fee: cells[7].clone(),
+                close_today_fee: cells[8].clone(),
+                updated_at: updated_at.clone(),
+            });
+        }
+    }
+    
+    println!("📊 解析到 {} 条期货费用数据", fees_list.len());
+    Ok(fees_list)
 }
 
 
