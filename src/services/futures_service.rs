@@ -3117,6 +3117,545 @@ fn parse_dce_table_section(lines: &[&str], start: usize, end: usize) -> Vec<(Str
 }
 
 
+// ==================== 大商所持仓排名（备用接口） ====================
+
+/// 大连商品交易所-每日持仓排名-具体合约
+/// 对应 akshare 的 futures_dce_position_rank() 函数
+/// 数据来源: http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html
+/// 
+/// 该接口通过下载ZIP文件获取持仓排名数据，比 get_dce_rank_table 更稳定
+/// 
+/// date: 交易日期，格式 YYYYMMDD
+/// vars_list: 品种代码列表，如 ["M", "Y"]，为空时返回所有品种
+pub async fn futures_dce_position_rank(date: &str, vars_list: Option<Vec<&str>>) -> Result<Vec<RankTableResponse>> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+    
+    let url = "http://www.dce.com.cn/dcereport/publicweb/dailystat/memberDealPosi/batchDownload";
+    
+    let payload = serde_json::json!({
+        "tradeDate": date,
+        "varietyId": "a",
+        "contractId": "a2601",
+        "tradeType": "1",
+        "lang": "zh"
+    });
+    
+    println!("📡 请求大商所持仓排名数据(ZIP) URL: {}", url);
+    
+    let response = client
+        .post(url)
+        .json(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "*/*")
+        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .header("Accept-Encoding", "gzip, deflate")
+        .header("Origin", "http://www.dce.com.cn")
+        .header("Referer", "http://www.dce.com.cn/dalianshangpin/xqsj/tjsj26/rtj/rcjccpm/index.html")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        // 大商所API有反爬虫机制，返回更友好的错误信息
+        if response.status().as_u16() == 412 {
+            return Err(anyhow!(
+                "大商所API访问被拒绝(412)，该交易所有反爬虫机制。\n\
+                建议: 1) 稍后重试 2) 使用浏览器手动下载数据 3) 尝试 futures_dce_position_rank_other() 接口"
+            ));
+        }
+        return Err(anyhow!("获取大商所持仓排名数据失败: {}", response.status()));
+    }
+
+    let bytes = response.bytes().await?;
+    
+    // 解析ZIP文件
+    use std::io::{Cursor, Read};
+    let cursor = Cursor::new(bytes.as_ref());
+    let mut archive = match zip::ZipArchive::new(cursor) {
+        Ok(a) => a,
+        Err(e) => return Err(anyhow!("打开ZIP文件失败: {}，可能是非交易日或数据不存在", e)),
+    };
+    
+    let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| anyhow!("读取ZIP文件失败: {}", e))?;
+        
+        let file_name = file.name().to_string();
+        
+        // 只处理以日期开头的文件
+        if !file_name.starts_with(date) {
+            continue;
+        }
+        
+        // 提取合约代码（文件名格式: 20230706_m2309_成交量_买持仓_卖持仓排名.txt）
+        let parts: Vec<&str> = file_name.split('_').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        let symbol = parts[1].to_uppercase();
+        let variety = extract_variety(&symbol);
+        
+        // 如果指定了品种列表，检查是否在列表中
+        if let Some(ref vars) = vars_list {
+            if !vars.iter().any(|v| v.eq_ignore_ascii_case(&variety)) {
+                continue;
+            }
+        }
+        
+        // 读取文件内容
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)?;
+        
+        // 尝试不同编码
+        let text = match String::from_utf8(content.clone()) {
+            Ok(s) => s,
+            Err(_) => encoding_rs::GBK.decode(&content).0.to_string(),
+        };
+        
+        // 解析文件内容
+        match parse_dce_position_file(&text, &symbol, &variety) {
+            Ok(data) => {
+                if !data.is_empty() {
+                    symbol_data.insert(symbol, data);
+                }
+            }
+            Err(e) => {
+                log::warn!("解析 {} 数据失败: {}", symbol, e);
+            }
+        }
+    }
+    
+    // 转换为响应格式
+    let mut result: Vec<RankTableResponse> = symbol_data.into_iter()
+        .map(|(symbol, data)| RankTableResponse { symbol, data })
+        .collect();
+    
+    // 按合约代码排序
+    result.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", result.len());
+    Ok(result)
+}
+
+/// 解析大商所持仓排名文件内容
+fn parse_dce_position_file(text: &str, symbol: &str, variety: &str) -> Result<Vec<PositionRankData>> {
+    let lines: Vec<&str> = text.lines().collect();
+    
+    // 检查是否有会员类别行（需要跳过末尾6行）
+    let has_member_type = lines.iter().any(|l| l.contains("会员类别"));
+    let effective_lines: Vec<&str> = if has_member_type {
+        lines[..lines.len().saturating_sub(6)].to_vec()
+    } else {
+        lines.clone()
+    };
+    
+    // 找到三个表格的起始位置（名次行）
+    let mut start_indices: Vec<usize> = Vec::new();
+    for (i, line) in effective_lines.iter().enumerate() {
+        if line.starts_with("名次") || line.contains("\t名次") {
+            start_indices.push(i);
+        }
+    }
+    
+    if start_indices.len() < 3 {
+        return Err(anyhow!("未找到完整的三个表格"));
+    }
+    
+    // 检查是否有有效数据（成交量表格至少要有5行数据）
+    if start_indices.len() >= 2 && start_indices[1] - start_indices[0] < 5 {
+        return Ok(Vec::new()); // 无有效数据
+    }
+    
+    // 找到总计/合计行
+    let mut end_indices: Vec<usize> = Vec::new();
+    for (i, line) in effective_lines.iter().enumerate() {
+        if line.contains("总计") || line.contains("合计") {
+            end_indices.push(i);
+        }
+    }
+    
+    if end_indices.len() < 3 {
+        return Err(anyhow!("未找到完整的三个表格结束标记"));
+    }
+    
+    // 解析三个表格
+    let vol_data = parse_dce_rank_section(&effective_lines, start_indices[0] + 1, end_indices[0]);
+    let long_data = parse_dce_rank_section(&effective_lines, start_indices[1] + 1, end_indices[1]);
+    let short_data = parse_dce_rank_section(&effective_lines, start_indices[2] + 1, end_indices[2]);
+    
+    // 合并数据
+    let max_len = vol_data.len().max(long_data.len()).max(short_data.len());
+    let mut result = Vec::new();
+    
+    for i in 0..max_len {
+        let (vol_name, vol, vol_chg) = vol_data.get(i).cloned().unwrap_or_default();
+        let (long_name, long_oi, long_chg) = long_data.get(i).cloned().unwrap_or_default();
+        let (short_name, short_oi, short_chg) = short_data.get(i).cloned().unwrap_or_default();
+        
+        result.push(PositionRankData {
+            rank: (i + 1) as i32,
+            vol_party_name: vol_name,
+            vol,
+            vol_chg,
+            long_party_name: long_name,
+            long_open_interest: long_oi,
+            long_open_interest_chg: long_chg,
+            short_party_name: short_name,
+            short_open_interest: short_oi,
+            short_open_interest_chg: short_chg,
+            symbol: symbol.to_string(),
+            variety: variety.to_string(),
+        });
+    }
+    
+    Ok(result)
+}
+
+/// 解析大商所排名表格段落
+fn parse_dce_rank_section(lines: &[&str], start: usize, end: usize) -> Vec<(String, i64, i64)> {
+    let mut result = Vec::new();
+    
+    for i in start..end {
+        if i >= lines.len() {
+            break;
+        }
+        let line = lines[i].trim();
+        if line.is_empty() {
+            continue;
+        }
+        
+        // 分割字段（制表符或多空格分隔）
+        let fields: Vec<&str> = line.split(|c| c == '\t')
+            .filter(|s| !s.is_empty())
+            .collect();
+        
+        // 如果制表符分割不够，尝试空格分割
+        let fields = if fields.len() < 4 {
+            line.split_whitespace().collect::<Vec<&str>>()
+        } else {
+            fields
+        };
+        
+        if fields.len() >= 4 {
+            // 字段顺序: 名次, 会员简称, 成交量/持仓量, 增减
+            let name = fields[1].trim().replace(",", "").replace("-", "");
+            let value: i64 = fields[2].trim().replace(",", "").replace("-", "0").parse().unwrap_or(0);
+            let change: i64 = fields[3].trim().replace(",", "").replace("-", "0").parse().unwrap_or(0);
+            
+            if !name.is_empty() {
+                result.push((name, value, change));
+            }
+        }
+    }
+    
+    result
+}
+
+
+/// 大连商品交易所-每日持仓排名-具体合约-补充接口
+/// 对应 akshare 的 futures_dce_position_rank_other() 函数
+/// 数据来源: http://www.dce.com.cn/publicweb/quotesdata/memberDealPosiQuotes.html
+/// 
+/// 该接口通过HTML表单POST获取数据，当主接口不可用时可作为备选
+/// 
+/// date: 交易日期，格式 YYYYMMDD
+pub async fn futures_dce_position_rank_other(date: &str) -> Result<Vec<RankTableResponse>> {
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+    
+    let url = "http://www.dce.com.cn/publicweb/quotesdata/memberDealPosiQuotes.html";
+    
+    // 解析日期
+    let year: i32 = date[0..4].parse().map_err(|_| anyhow!("无效的日期格式"))?;
+    let month: i32 = date[4..6].parse().map_err(|_| anyhow!("无效的日期格式"))?;
+    let day: i32 = date[6..8].parse().map_err(|_| anyhow!("无效的日期格式"))?;
+    
+    println!("📡 请求大商所持仓排名数据(HTML) URL: {}", url);
+    
+    // 第一步：获取品种列表
+    let payload = [
+        ("memberDealPosiQuotes.variety", "c"),
+        ("memberDealPosiQuotes.trade_type", "0"),
+        ("year", &year.to_string()),
+        ("month", &(month - 1).to_string()),  // 月份从0开始
+        ("day", &day.to_string()),
+        ("contract.contract_id", "all"),
+        ("contract.variety_id", "c"),
+        ("contract", ""),
+    ];
+    
+    let response = client
+        .post(url)
+        .form(&payload)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .header("Origin", "http://www.dce.com.cn")
+        .header("Referer", "http://www.dce.com.cn/publicweb/quotesdata/memberDealPosiQuotes.html")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        // 大商所API有反爬虫机制，返回更友好的错误信息
+        if response.status().as_u16() == 412 {
+            return Err(anyhow!(
+                "大商所API访问被拒绝(412)，该交易所有反爬虫机制。\n\
+                建议: 1) 稍后重试 2) 使用浏览器手动下载数据"
+            ));
+        }
+        return Err(anyhow!("获取大商所品种列表失败: {}", response.status()));
+    }
+
+    let html = response.text().await?;
+    
+    // 解析品种列表
+    let symbol_list = parse_dce_symbol_list(&html)?;
+    
+    if symbol_list.is_empty() {
+        return Err(anyhow!("未找到品种列表，可能是非交易日"));
+    }
+    
+    println!("📊 找到 {} 个品种", symbol_list.len());
+    
+    let mut all_results: Vec<RankTableResponse> = Vec::new();
+    
+    // 遍历每个品种获取合约列表和数据
+    for symbol in &symbol_list {
+        // 获取该品种的合约列表
+        let payload = [
+            ("memberDealPosiQuotes.variety", symbol.as_str()),
+            ("memberDealPosiQuotes.trade_type", "0"),
+            ("year", &year.to_string()),
+            ("month", &(month - 1).to_string()),
+            ("day", &day.to_string()),
+            ("contract.contract_id", "all"),
+            ("contract.variety_id", symbol.as_str()),
+            ("contract", ""),
+        ];
+        
+        let response = match client
+            .post(url)
+            .form(&payload)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            .send()
+            .await {
+                Ok(r) => r,
+                Err(e) => {
+                    log::warn!("获取 {} 合约列表失败: {}", symbol, e);
+                    continue;
+                }
+            };
+        
+        if !response.status().is_success() {
+            continue;
+        }
+        
+        let html = response.text().await?;
+        let contract_list = parse_dce_contract_list(&html, symbol);
+        
+        // 获取每个合约的持仓排名数据
+        for contract in &contract_list {
+            let payload = [
+                ("memberDealPosiQuotes.variety", symbol.as_str()),
+                ("memberDealPosiQuotes.trade_type", "0"),
+                ("year", &year.to_string()),
+                ("month", &(month - 1).to_string()),
+                ("day", &format!("{:02}", day)),
+                ("contract.contract_id", contract.as_str()),
+                ("contract.variety_id", symbol.as_str()),
+                ("contract", ""),
+            ];
+            
+            let response = match client
+                .post(url)
+                .form(&payload)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .send()
+                .await {
+                    Ok(r) => r,
+                    Err(e) => {
+                        log::warn!("获取 {} 数据失败: {}", contract, e);
+                        continue;
+                    }
+                };
+            
+            if !response.status().is_success() {
+                continue;
+            }
+            
+            let html = response.text().await?;
+            
+            // 解析HTML表格数据
+            match parse_dce_html_table(&html, contract, symbol) {
+                Ok(data) => {
+                    if !data.is_empty() {
+                        all_results.push(RankTableResponse {
+                            symbol: contract.to_uppercase(),
+                            data,
+                        });
+                    }
+                }
+                Err(e) => {
+                    log::warn!("解析 {} 数据失败: {}", contract, e);
+                }
+            }
+        }
+    }
+    
+    // 按合约代码排序
+    all_results.sort_by(|a, b| a.symbol.cmp(&b.symbol));
+    
+    println!("📊 解析到 {} 个合约的持仓排名数据", all_results.len());
+    Ok(all_results)
+}
+
+/// 解析大商所品种列表
+fn parse_dce_symbol_list(html: &str) -> Result<Vec<String>> {
+    let document = scraper::Html::parse_document(html);
+    let selector = scraper::Selector::parse("input.selBox").unwrap();
+    
+    let mut symbols = Vec::new();
+    
+    for element in document.select(&selector) {
+        if let Some(onclick) = element.value().attr("onclick") {
+            // 格式: javascript:setVariety('a');
+            if let Some(start) = onclick.find("setVariety('") {
+                let rest = &onclick[start + 12..];
+                if let Some(end) = rest.find("'") {
+                    let symbol = &rest[..end];
+                    if !symbol.is_empty() {
+                        symbols.push(symbol.to_string());
+                    }
+                }
+            }
+        }
+    }
+    
+    // 如果上面的方法没找到，尝试另一种选择器
+    if symbols.is_empty() {
+        let selector = scraper::Selector::parse(".selBox input").unwrap();
+        for element in document.select(&selector) {
+            if let Some(onclick) = element.value().attr("onclick") {
+                if let Some(start) = onclick.find("setVariety(") {
+                    let rest = &onclick[start + 11..];
+                    if let Some(end) = rest.find(")") {
+                        let symbol = rest[..end].trim_matches(|c| c == '\'' || c == '"');
+                        if !symbol.is_empty() {
+                            symbols.push(symbol.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(symbols)
+}
+
+/// 解析大商所合约列表
+fn parse_dce_contract_list(html: &str, symbol: &str) -> Vec<String> {
+    let document = scraper::Html::parse_document(html);
+    let selector = scraper::Selector::parse("input[name='contract']").unwrap();
+    
+    let mut contracts = Vec::new();
+    
+    for element in document.select(&selector) {
+        if let Some(onclick) = element.value().attr("onclick") {
+            // 格式: javascript:setContract_id('2401');
+            if let Some(start) = onclick.find("setContract_id('") {
+                let rest = &onclick[start + 16..];
+                if let Some(end) = rest.find("'") {
+                    let contract_suffix = &rest[..end];
+                    // 如果合约后缀是4位数字，需要加上品种前缀
+                    let contract = if contract_suffix.len() == 4 && contract_suffix.chars().all(|c| c.is_ascii_digit()) {
+                        format!("{}{}", symbol, contract_suffix)
+                    } else {
+                        contract_suffix.to_string()
+                    };
+                    if !contract.is_empty() {
+                        contracts.push(contract);
+                    }
+                }
+            }
+        }
+    }
+    
+    contracts
+}
+
+/// 解析大商所HTML表格数据
+fn parse_dce_html_table(html: &str, contract: &str, variety: &str) -> Result<Vec<PositionRankData>> {
+    let document = scraper::Html::parse_document(html);
+    
+    // 查找数据表格（通常是第二个表格）
+    let table_selector = scraper::Selector::parse("table").unwrap();
+    let tables: Vec<_> = document.select(&table_selector).collect();
+    
+    if tables.len() < 2 {
+        return Err(anyhow!("未找到数据表格"));
+    }
+    
+    let data_table = tables[1];
+    let row_selector = scraper::Selector::parse("tr").unwrap();
+    let cell_selector = scraper::Selector::parse("td").unwrap();
+    
+    let mut result = Vec::new();
+    
+    for row in data_table.select(&row_selector) {
+        let cells: Vec<_> = row.select(&cell_selector).collect();
+        
+        // 跳过表头和合计行
+        if cells.len() < 12 {
+            continue;
+        }
+        
+        let first_cell = cells[0].text().collect::<String>().trim().to_string();
+        if first_cell.is_empty() || first_cell.contains("名次") || first_cell.contains("合计") || first_cell.contains("总计") {
+            continue;
+        }
+        
+        // 解析排名
+        let rank: i32 = first_cell.parse().unwrap_or(0);
+        if rank == 0 {
+            continue;
+        }
+        
+        // 解析各列数据
+        // 列顺序: 名次, 会员简称, 成交量, 增减, _, 会员简称, 持买单量, 增减, _, 会员简称, 持卖单量, 增减
+        let get_text = |idx: usize| -> String {
+            cells.get(idx)
+                .map(|c| c.text().collect::<String>().trim().replace(",", "").replace("-", "0"))
+                .unwrap_or_default()
+        };
+        
+        let get_num = |idx: usize| -> i64 {
+            get_text(idx).parse().unwrap_or(0)
+        };
+        
+        result.push(PositionRankData {
+            rank,
+            vol_party_name: get_text(1),
+            vol: get_num(2),
+            vol_chg: get_num(3),
+            long_party_name: get_text(5),
+            long_open_interest: get_num(6),
+            long_open_interest_chg: get_num(7),
+            short_party_name: get_text(9),
+            short_open_interest: get_num(10),
+            short_open_interest_chg: get_num(11),
+            symbol: contract.to_uppercase(),
+            variety: variety.to_uppercase(),
+        });
+    }
+    
+    Ok(result)
+}
+
+
 // ==================== 持仓排名汇总相关 ====================
 
 /// 获取广州期货交易所前20会员持仓排名数据
@@ -4649,6 +5188,71 @@ mod tests {
             }
             Err(e) => {
                 println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取大商所持仓排名数据（ZIP接口）
+    #[tokio::test]
+    async fn test_futures_dce_position_rank() {
+        println!("\n========== 测试获取大商所持仓排名数据（ZIP接口） ==========");
+        
+        // 测试获取指定品种
+        println!("\n  1. 测试获取指定品种（M, Y）:");
+        match futures_dce_position_rank("20250107", Some(vec!["M", "Y"])).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n    合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("      {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取所有品种
+        println!("\n  2. 测试获取所有品种:");
+        match futures_dce_position_rank("20250107", None).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 个合约", data.len());
+                // 只显示前5个合约
+                for item in data.iter().take(5) {
+                    println!("    合约: {} ({})", item.symbol, 
+                        item.data.first().map(|d| d.variety.as_str()).unwrap_or(""));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取大商所持仓排名数据（HTML接口）
+    #[tokio::test]
+    async fn test_futures_dce_position_rank_other() {
+        println!("\n========== 测试获取大商所持仓排名数据（HTML接口） ==========");
+        
+        // 注意：这个接口比较慢，因为需要多次HTTP请求
+        match futures_dce_position_rank_other("20250107").await {
+            Ok(data) => {
+                println!("✅ 获取成功！共 {} 个合约", data.len());
+                for item in data.iter().take(3) {
+                    println!("\n  合约: {}", item.symbol);
+                    for row in item.data.iter().take(5) {
+                        println!("    {} - {} 成交:{} 多单:{} 空单:{}", 
+                            row.rank, row.vol_party_name, row.vol,
+                            row.long_open_interest, row.short_open_interest);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("❌ 获取失败: {}", e);
             }
         }
     }
