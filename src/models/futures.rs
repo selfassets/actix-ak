@@ -159,6 +159,37 @@ pub struct ForeignFuturesDetailItem {
     pub value: String,          // 项目值
 }
 
+/// 期货手续费信息
+/// 对应 akshare 的 futures_comm_info() 返回结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FuturesCommInfo {
+    pub exchange: String,                    // 交易所名称
+    pub contract_name: String,               // 合约名称
+    pub contract_code: String,               // 合约代码
+    pub current_price: Option<f64>,          // 现价
+    pub limit_up: Option<f64>,               // 涨停板
+    pub limit_down: Option<f64>,             // 跌停板
+    pub margin_buy: Option<f64>,             // 保证金-买开(%)
+    pub margin_sell: Option<f64>,            // 保证金-卖开(%)
+    pub margin_per_lot: Option<f64>,         // 保证金-每手(元)
+    pub fee_open_ratio: Option<f64>,         // 手续费标准-开仓-万分之
+    pub fee_open_yuan: Option<f64>,          // 手续费标准-开仓-元
+    pub fee_close_yesterday_ratio: Option<f64>,  // 手续费标准-平昨-万分之
+    pub fee_close_yesterday_yuan: Option<f64>,   // 手续费标准-平昨-元
+    pub fee_close_today_ratio: Option<f64>,      // 手续费标准-平今-万分之
+    pub fee_close_today_yuan: Option<f64>,       // 手续费标准-平今-元
+    pub profit_per_tick: Option<f64>,        // 每跳毛利
+    pub fee_total: Option<f64>,              // 手续费(开+平)
+    pub net_profit_per_tick: Option<f64>,    // 每跳净利
+    pub remark: Option<String>,              // 备注
+}
+
+/// 期货手续费查询参数
+#[derive(Debug, Deserialize)]
+pub struct FuturesCommQuery {
+    pub exchange: Option<String>,  // 交易所：所有/上海期货交易所/大连商品交易所/郑州商品交易所/上海国际能源交易中心/中国金融期货交易所/广州期货交易所
+}
+
 /// 期货交易费用信息
 /// 对应 akshare 的 futures_fees_info() 返回结果
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -9,7 +9,7 @@ use crate::models::{
     FuturesSymbolMark, FuturesContractDetail, ForeignFuturesSymbol,
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     ForeignFuturesHistData, ForeignFuturesDetail, ForeignFuturesDetailItem,
-    FuturesFeesInfo
+    FuturesFeesInfo, FuturesCommInfo
 };
 
 // 获取北京时间字符串（带+08:00时区）
@@ -1228,6 +1228,189 @@ fn parse_fees_html(html: &str) -> Result<Vec<FuturesFeesInfo>> {
     Ok(fees_list)
 }
 
+/// 九期网期货手续费API
+const QIHUO9_COMM_URL: &str = "https://www.9qihuo.com/qihuoshouxufei";
+
+/// 获取期货手续费信息
+/// 对应 akshare 的 futures_comm_info() 函数
+/// 数据来源: https://www.9qihuo.com/qihuoshouxufei
+/// exchange: 交易所名称，可选值：所有/上海期货交易所/大连商品交易所/郑州商品交易所/上海国际能源交易中心/中国金融期货交易所/广州期货交易所
+pub async fn get_futures_comm_info(exchange: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
+    let client = Client::builder()
+        .danger_accept_invalid_certs(true)  // 九期网证书可能有问题
+        .build()?;
+    
+    println!("📡 请求期货手续费数据 URL: {}", QIHUO9_COMM_URL);
+    
+    let response = client
+        .get(QIHUO9_COMM_URL)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow!("获取期货手续费数据失败: {}", response.status()));
+    }
+
+    let text = response.text().await?;
+    parse_comm_info_html(&text, exchange)
+}
+
+/// 解析期货手续费HTML
+fn parse_comm_info_html(html: &str, exchange_filter: Option<&str>) -> Result<Vec<FuturesCommInfo>> {
+    let mut all_data = Vec::new();
+    
+    // 查找表格
+    let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
+    let tables: Vec<_> = table_re.captures_iter(html).collect();
+    
+    if tables.is_empty() {
+        return Err(anyhow!("未找到手续费数据表格"));
+    }
+    
+    // 获取第一个表格（主数据表格）
+    let table_content = tables[0].get(1).map(|m| m.as_str()).unwrap_or("");
+    
+    // 解析表格行
+    let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
+    let cell_re = Regex::new(r"<td[^>]*>([\s\S]*?)</td>").unwrap();
+    
+    // 清理HTML标签
+    let clean_html = |s: &str| -> String {
+        let tag_re = Regex::new(r"<[^>]+>").unwrap();
+        tag_re.replace_all(s, "").trim().to_string()
+    };
+    
+    // 交易所分隔标记
+    let exchange_markers = vec![
+        "上海期货交易所",
+        "大连商品交易所", 
+        "郑州商品交易所",
+        "上海国际能源交易中心",
+        "广州期货交易所",
+        "中国金融期货交易所",
+    ];
+    
+    let mut current_exchange = String::new();
+    let mut skip_header_rows = 0;
+    
+    for row_cap in row_re.captures_iter(table_content) {
+        let row_content = row_cap.get(1).map(|m| m.as_str()).unwrap_or("");
+        let cells: Vec<String> = cell_re.captures_iter(row_content)
+            .filter_map(|c| c.get(1).map(|m| clean_html(m.as_str())))
+            .collect();
+        
+        if cells.is_empty() {
+            continue;
+        }
+        
+        // 检查是否是交易所标题行
+        let first_cell = &cells[0];
+        let mut is_exchange_header = false;
+        for marker in &exchange_markers {
+            if first_cell.contains(marker) {
+                current_exchange = marker.to_string();
+                skip_header_rows = 2; // 跳过接下来的2行表头
+                is_exchange_header = true;
+                break;
+            }
+        }
+        
+        if is_exchange_header {
+            continue;
+        }
+        
+        // 跳过表头行
+        if skip_header_rows > 0 {
+            skip_header_rows -= 1;
+            continue;
+        }
+        
+        // 跳过空行或无效行
+        if current_exchange.is_empty() || cells.len() < 12 {
+            continue;
+        }
+        
+        // 根据交易所过滤
+        if let Some(filter) = exchange_filter {
+            if filter != "所有" && current_exchange != filter {
+                continue;
+            }
+        }
+        
+        // 解析数据行
+        // 列: 合约品种(0), 现价(1), 涨/跌停板(2), 保证金-买开(3), 保证金-卖开(4), 
+        // 保证金/每手(5), 手续费标准-开仓(6), 手续费标准-平昨(7), 手续费标准-平今(8),
+        // 每跳毛利(9), 手续费(开+平)(10), 每跳净利(11), 备注(12)
+        
+        // 解析合约品种 "品种名(代码)"
+        let contract_str = &cells[0];
+        let (contract_name, contract_code) = if let Some(idx) = contract_str.find('(') {
+            let name = contract_str[..idx].trim().to_string();
+            let code = contract_str[idx+1..].trim_end_matches(')').to_string();
+            (name, code)
+        } else {
+            (contract_str.clone(), String::new())
+        };
+        
+        // 解析涨跌停板 "涨停/跌停"
+        let limit_str = cells.get(2).map(|s| s.as_str()).unwrap_or("");
+        let (limit_up, limit_down) = if let Some(idx) = limit_str.find('/') {
+            let up = limit_str[..idx].trim().parse::<f64>().ok();
+            let down = limit_str[idx+1..].trim().parse::<f64>().ok();
+            (up, down)
+        } else {
+            (None, None)
+        };
+        
+        // 解析手续费标准（可能是"万分之X"或"X元"）
+        let parse_fee = |s: &str| -> (Option<f64>, Option<f64>) {
+            if s.contains("万分之") {
+                let ratio = s.replace("万分之", "")
+                    .split('/')
+                    .next()
+                    .and_then(|v| v.trim().parse::<f64>().ok())
+                    .map(|v| v / 10000.0);
+                (ratio, None)
+            } else if s.contains("元") {
+                let yuan = s.replace("元", "").trim().parse::<f64>().ok();
+                (None, yuan)
+            } else {
+                (None, None)
+            }
+        };
+        
+        let (fee_open_ratio, fee_open_yuan) = parse_fee(cells.get(6).map(|s| s.as_str()).unwrap_or(""));
+        let (fee_close_yesterday_ratio, fee_close_yesterday_yuan) = parse_fee(cells.get(7).map(|s| s.as_str()).unwrap_or(""));
+        let (fee_close_today_ratio, fee_close_today_yuan) = parse_fee(cells.get(8).map(|s| s.as_str()).unwrap_or(""));
+        
+        all_data.push(FuturesCommInfo {
+            exchange: current_exchange.clone(),
+            contract_name,
+            contract_code,
+            current_price: cells.get(1).and_then(|s| s.parse::<f64>().ok()),
+            limit_up,
+            limit_down,
+            margin_buy: cells.get(3).and_then(|s| s.trim_end_matches('%').parse::<f64>().ok()),
+            margin_sell: cells.get(4).and_then(|s| s.trim_end_matches('%').parse::<f64>().ok()),
+            margin_per_lot: cells.get(5).and_then(|s| s.trim_end_matches('元').parse::<f64>().ok()),
+            fee_open_ratio,
+            fee_open_yuan,
+            fee_close_yesterday_ratio,
+            fee_close_yesterday_yuan,
+            fee_close_today_ratio,
+            fee_close_today_yuan,
+            profit_per_tick: cells.get(9).and_then(|s| s.parse::<f64>().ok()),
+            fee_total: cells.get(10).and_then(|s| s.trim_end_matches('元').parse::<f64>().ok()),
+            net_profit_per_tick: cells.get(11).and_then(|s| s.parse::<f64>().ok()),
+            remark: cells.get(12).cloned(),
+        });
+    }
+    
+    println!("📊 解析到 {} 条期货手续费数据", all_data.len());
+    Ok(all_data)
+}
+
 
 // ==================== 主力连续合约相关 ====================
 
@@ -2179,6 +2362,73 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ 获取失败: {}", e);
+            }
+        }
+    }
+
+    /// 测试获取期货手续费信息（九期网）
+    #[tokio::test]
+    async fn test_futures_comm_info() {
+        println!("\n========== 测试获取期货手续费信息（九期网） ==========");
+        
+        // 测试获取所有交易所
+        println!("\n  1. 测试获取所有交易所数据:");
+        match get_futures_comm_info(Some("所有")).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                println!("\n  前10条数据:");
+                println!("  {:<12} {:<10} {:<8} {:>8} {:>8} {:>10} {:>10}", 
+                    "交易所", "合约名称", "代码", "现价", "保证金%", "开仓费", "平今费");
+                for d in data.iter().take(10) {
+                    let fee_open = d.fee_open_yuan.map(|v| format!("{}元", v))
+                        .or_else(|| d.fee_open_ratio.map(|v| format!("{:.4}‱", v * 10000.0)))
+                        .unwrap_or("-".to_string());
+                    let fee_today = d.fee_close_today_yuan.map(|v| format!("{}元", v))
+                        .or_else(|| d.fee_close_today_ratio.map(|v| format!("{:.4}‱", v * 10000.0)))
+                        .unwrap_or("-".to_string());
+                    println!("  {:<12} {:<10} {:<8} {:>8.0} {:>8.1} {:>10} {:>10}", 
+                        d.exchange, d.contract_name, d.contract_code, 
+                        d.current_price.unwrap_or(0.0),
+                        d.margin_buy.unwrap_or(0.0),
+                        fee_open, fee_today);
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取上海期货交易所
+        println!("\n  2. 测试获取上海期货交易所数据:");
+        match get_futures_comm_info(Some("上海期货交易所")).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in data.iter().take(5) {
+                    println!("    {} ({}) - 现价:{:.0} 保证金:{:.1}%", 
+                        d.contract_name, d.contract_code, 
+                        d.current_price.unwrap_or(0.0),
+                        d.margin_buy.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
+            }
+        }
+        
+        // 测试获取中国金融期货交易所
+        println!("\n  3. 测试获取中国金融期货交易所数据:");
+        match get_futures_comm_info(Some("中国金融期货交易所")).await {
+            Ok(data) => {
+                println!("  ✅ 获取成功！共 {} 条数据", data.len());
+                for d in data.iter().take(5) {
+                    println!("    {} ({}) - 现价:{:.0} 保证金:{:.1}%", 
+                        d.contract_name, d.contract_code, 
+                        d.current_price.unwrap_or(0.0),
+                        d.margin_buy.unwrap_or(0.0));
+                }
+            }
+            Err(e) => {
+                println!("  ❌ 获取失败: {}", e);
             }
         }
     }

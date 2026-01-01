@@ -4,13 +4,15 @@ use crate::models::{
     FuturesSymbolMark, FuturesContractDetail,
     FuturesMainContract, FuturesMainDailyData, FuturesHoldPosition,
     FuturesHoldPosQuery, FuturesMainQuery,
-    ForeignFuturesHistData, ForeignFuturesDetail, FuturesFeesInfo
+    ForeignFuturesHistData, ForeignFuturesDetail, FuturesFeesInfo,
+    FuturesCommInfo, FuturesCommQuery
 };
 use crate::services::futures_service::{
     FuturesService, get_futures_history, get_futures_minute_data,
     get_foreign_futures_symbols, get_foreign_futures_realtime,
     get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina,
-    get_futures_foreign_hist, get_futures_foreign_detail, get_futures_fees_info
+    get_futures_foreign_hist, get_futures_foreign_detail, get_futures_fees_info,
+    get_futures_comm_info
 };
 
 /// 获取单个期货合约实时数据
@@ -359,6 +361,24 @@ pub async fn get_fees_info() -> Result<HttpResponse> {
     }
 }
 
+/// 获取期货手续费信息（九期网）
+/// GET /futures/comm_info?exchange=所有
+/// 对应 akshare 的 futures_comm_info()
+pub async fn get_comm_info(query: web::Query<FuturesCommQuery>) -> Result<HttpResponse> {
+    let exchange = query.exchange.as_deref();
+    
+    match get_futures_comm_info(exchange).await {
+        Ok(data) => {
+            let response = ApiResponse::success(data);
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(e) => {
+            let response = ApiResponse::<Vec<FuturesCommInfo>>::error(e.to_string());
+            Ok(HttpResponse::InternalServerError().json(response))
+        }
+    }
+}
+
 /// 配置期货相关路由
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -369,8 +389,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/symbols", web::get().to(get_symbol_mark))
             .route("/symbols/{exchange}", web::get().to(get_exchange_symbols))
             .route("/batch", web::post().to(get_multiple_futures))
-            // 交易费用
+            // 交易费用和手续费
             .route("/fees", web::get().to(get_fees_info))
+            .route("/comm_info", web::get().to(get_comm_info))
             // 主力连续合约
             .route("/main/display", web::get().to(get_display_main_contracts))
             .route("/main/{symbol}/daily", web::get().to(get_main_daily))
