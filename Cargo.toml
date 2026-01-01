@@ -20,3 +20,4 @@ encoding_rs = "0.8"  # GB2312编码解析
 scraper = "0.18"  # HTML解析
 calamine = "0.24"  # Excel文件解析
 zip = "0.6"  # ZIP文件解析
+futures = "0.3"  # 异步工具
