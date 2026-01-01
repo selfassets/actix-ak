@@ -1,116 +1,261 @@
-### AkShare Backend API 测试
-### 参考 akshare 实现的期货数据接口
+### ============================================================
+### AkShare Backend API 测试文件
+### 参考 akshare 实现的期货和股票数据接口
+### ============================================================
 
 @baseUrl = http://127.0.0.1:8080/api/v1
+@token = default-api-key
 
-### 1. 健康检查
+### ============================================================
+### 健康检查（无需认证）
+### ============================================================
+
+### 健康检查 - 检测服务是否正常运行
 GET {{baseUrl}}/health
 
-### 2. 获取交易所列表
+### ============================================================
+### 期货 - 交易所和品种信息
+### ============================================================
+
+### 获取支持的交易所列表
 GET {{baseUrl}}/futures/exchanges
+Authorization: Bearer {{token}}
 
-### 3. 获取品种映射表（动态从新浪JS解析）
+### 获取所有品种映射表（从新浪JS动态解析）
 GET {{baseUrl}}/futures/symbols
+Authorization: Bearer {{token}}
 
-### 4. 获取指定交易所品种 - 上期所
+### 获取上期所品种列表
 GET {{baseUrl}}/futures/symbols/SHFE
+Authorization: Bearer {{token}}
 
-### 5. 获取指定交易所品种 - 大商所
+### 获取大商所品种列表
 GET {{baseUrl}}/futures/symbols/DCE
+Authorization: Bearer {{token}}
 
-### 6. 获取指定交易所品种 - 郑商所
+### 获取郑商所品种列表
 GET {{baseUrl}}/futures/symbols/CZCE
+Authorization: Bearer {{token}}
 
-### 7. 获取指定交易所品种 - 中金所
+### 获取中金所品种列表
 GET {{baseUrl}}/futures/symbols/CFFEX
+Authorization: Bearer {{token}}
 
-### 8. 获取单个期货合约实时数据 - 铜
+### ============================================================
+### 期货 - 实时行情
+### ============================================================
+
+### 获取单个合约实时数据 - 铜
 GET {{baseUrl}}/futures/CU2602
+Authorization: Bearer {{token}}
 
-### 9. 获取单个期货合约实时数据 - 螺纹钢
+### 获取单个合约实时数据 - 螺纹钢
 GET {{baseUrl}}/futures/RB2605
+Authorization: Bearer {{token}}
 
-### 10. 获取金融期货实时数据 - 沪深300
+### 获取单个合约实时数据 - 沪深300股指期货
 GET {{baseUrl}}/futures/IF2603
+Authorization: Bearer {{token}}
 
-### 11. 批量获取期货实时数据
+### 批量获取期货实时数据
 POST {{baseUrl}}/futures/batch
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ["CU2602", "AL2602", "RB2605", "AU2602"]
 
-###
-
-### 12. 获取期货日K线历史数据
-GET {{baseUrl}}/futures/CU2602/history?limit=10
-
-### 13. 获取期货日K线历史数据 - 更多数据
-GET {{baseUrl}}/futures/RB2605/history?limit=30
-
-### 14. 获取期货5分钟K线数据
-GET {{baseUrl}}/futures/CU2602/minute?period=5
-
-### 15. 获取期货15分钟K线数据
-GET {{baseUrl}}/futures/CU2602/minute?period=15
-
-### 16. 获取期货60分钟K线数据
-GET {{baseUrl}}/futures/CU2602/minute?period=60
-
-### 17. 获取期货列表 - 上期所
-GET {{baseUrl}}/futures?exchange=SHFE&limit=10
-
-### 18. 获取期货列表 - 大商所
-GET {{baseUrl}}/futures?exchange=DCE&limit=10
-
-### 19. 获取期货列表 - 郑商所
-GET {{baseUrl}}/futures?exchange=CZCE&limit=10
-
-### 20. 获取期货列表 - 中金所
-GET {{baseUrl}}/futures?exchange=CFFEX&limit=10
-
-### 21. 获取交易所主力合约 - 上期所
-GET {{baseUrl}}/futures/main/SHFE
-
-### 22. 获取交易所主力合约 - 大商所
-GET {{baseUrl}}/futures/main/DCE
-
-### 23. 获取品种所有合约实时数据
+### 获取品种所有合约实时数据（按品种名称）
 GET {{baseUrl}}/futures/realtime/铜
+Authorization: Bearer {{token}}
 
-### 24. 获取合约详情
+### ============================================================
+### 期货 - K线历史数据
+### ============================================================
+
+### 获取日K线数据 - 限制10条
+GET {{baseUrl}}/futures/CU2602/history?limit=10
+Authorization: Bearer {{token}}
+
+### 获取日K线数据 - 限制30条
+GET {{baseUrl}}/futures/RB2605/history?limit=30
+Authorization: Bearer {{token}}
+
+### 获取5分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=5
+Authorization: Bearer {{token}}
+
+### 获取15分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=15
+Authorization: Bearer {{token}}
+
+### 获取60分钟K线数据
+GET {{baseUrl}}/futures/CU2602/minute?period=60
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 期货 - 合约列表和详情
+### ============================================================
+
+### 获取期货列表 - 上期所
+GET {{baseUrl}}/futures?exchange=SHFE&limit=10
+Authorization: Bearer {{token}}
+
+### 获取期货列表 - 大商所
+GET {{baseUrl}}/futures?exchange=DCE&limit=10
+Authorization: Bearer {{token}}
+
+### 获取期货列表 - 郑商所
+GET {{baseUrl}}/futures?exchange=CZCE&limit=10
+Authorization: Bearer {{token}}
+
+### 获取期货列表 - 中金所
+GET {{baseUrl}}/futures?exchange=CFFEX&limit=10
+Authorization: Bearer {{token}}
+
+### 获取合约详情
 GET {{baseUrl}}/futures/CU2602/detail
+Authorization: Bearer {{token}}
 
-### 25. 获取外盘期货品种列表
+### ============================================================
+### 期货 - 主力连续合约
+### ============================================================
+
+### 获取主力连续合约一览表
+GET {{baseUrl}}/futures/main/display
+Authorization: Bearer {{token}}
+
+### 获取上期所主力合约列表
+GET {{baseUrl}}/futures/main/SHFE
+Authorization: Bearer {{token}}
+
+### 获取大商所主力合约列表
+GET {{baseUrl}}/futures/main/DCE
+Authorization: Bearer {{token}}
+
+### 获取主力连续日K线数据（指定日期范围）
+GET {{baseUrl}}/futures/main/RB0/daily?start_date=20240101&end_date=20240301
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 期货 - 持仓排名
+### ============================================================
+
+### 获取持仓排名 - 成交量排名
+GET {{baseUrl}}/futures/hold_pos?pos_type=volume&contract=RB2510&date=20250107
+Authorization: Bearer {{token}}
+
+### 获取持仓排名 - 多头持仓排名
+GET {{baseUrl}}/futures/hold_pos?pos_type=long&contract=RB2510&date=20250107
+Authorization: Bearer {{token}}
+
+### 获取持仓排名 - 空头持仓排名
+GET {{baseUrl}}/futures/hold_pos?pos_type=short&contract=RB2510&date=20250107
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 期货 - 交易费用和规则
+### ============================================================
+
+### 获取期货交易费用参照表
+GET {{baseUrl}}/futures/fees
+Authorization: Bearer {{token}}
+
+### 获取期货手续费信息（九期网）- 所有交易所
+GET {{baseUrl}}/futures/comm_info
+Authorization: Bearer {{token}}
+
+### 获取期货手续费信息 - 指定交易所
+GET {{baseUrl}}/futures/comm_info?exchange=上期所
+Authorization: Bearer {{token}}
+
+### 获取期货交易规则
+GET {{baseUrl}}/futures/rule?date=20250328
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 期货 - 库存数据（99期货网）
+### ============================================================
+
+### 获取99期货网品种映射表
+GET {{baseUrl}}/futures/inventory99/symbols
+Authorization: Bearer {{token}}
+
+### 获取库存数据 - 豆一
+GET {{baseUrl}}/futures/inventory99?symbol=豆一
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 期货 - 现货价格及基差
+### ============================================================
+
+### 获取现货价格及基差数据
+GET {{baseUrl}}/futures/spot_price?date=20240430&symbols=RB,CU
+Authorization: Bearer {{token}}
+
+### 获取现货价格历史数据（含180日统计）
+GET {{baseUrl}}/futures/spot_price_previous?date=20240430
+Authorization: Bearer {{token}}
+
+### 获取现货价格日线数据（日期范围）
+GET {{baseUrl}}/futures/spot_price_daily?start_date=20240101&end_date=20240105&symbols=RB,CU
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 外盘期货
+### ============================================================
+
+### 获取外盘期货品种列表
 GET {{baseUrl}}/futures/foreign/symbols
+Authorization: Bearer {{token}}
 
-### 26. 获取外盘期货实时行情 - 贵金属
+### 获取外盘期货实时行情 - 贵金属
 POST {{baseUrl}}/futures/foreign/realtime
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ["GC", "SI", "XAU", "XAG"]
 
-###
-
-### 27. 获取外盘期货实时行情 - 原油
+### 获取外盘期货实时行情 - 原油
 POST {{baseUrl}}/futures/foreign/realtime
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ["CL", "OIL"]
 
-###
-
-### 28. 获取外盘期货实时行情 - LME金属
+### 获取外盘期货实时行情 - LME金属
 POST {{baseUrl}}/futures/foreign/realtime
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ["CAD", "AHD", "ZSD", "NID"]
 
-###
-
-### 29. 获取外盘期货实时行情 - 农产品
+### 获取外盘期货实时行情 - 农产品
 POST {{baseUrl}}/futures/foreign/realtime
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ["S", "C", "W", "BO", "SM"]
 
-###
+### 获取外盘期货历史数据
+GET {{baseUrl}}/futures/foreign/GC/history
+Authorization: Bearer {{token}}
+
+### 获取外盘期货合约详情
+GET {{baseUrl}}/futures/foreign/GC/detail
+Authorization: Bearer {{token}}
+
+### ============================================================
+### 股票接口
+### ============================================================
+
+### 获取股票列表
+GET {{baseUrl}}/stocks?limit=20
+Authorization: Bearer {{token}}
+
+### 获取单只股票信息
+GET {{baseUrl}}/stocks/600000
+Authorization: Bearer {{token}}
+
+### 获取股票历史K线数据
+GET {{baseUrl}}/stocks/600000/history?limit=30
+Authorization: Bearer {{token}}
