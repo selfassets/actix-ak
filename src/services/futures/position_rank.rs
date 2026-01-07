@@ -1405,7 +1405,7 @@ pub async fn get_gfex_rank_table(
 ) -> Result<Vec<RankTableResponse>> {
     let client = Client::new();
 
-    let gfex_vars = vec!["SI", "LC", "PS"];
+    let gfex_vars = ["SI", "LC", "PS"];
 
     let target_vars: Vec<String> = match vars_list {
         Some(vars) => vars
