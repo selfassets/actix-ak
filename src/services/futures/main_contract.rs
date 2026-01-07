@@ -158,10 +158,10 @@ pub async fn get_futures_main_sina(
     let mut data = parse_main_daily_data(&text)?;
 
     if let Some(start) = start_date {
-        data.retain(|d| d.date.replace("-", "") >= start.to_string());
+        data.retain(|d| d.date.replace("-", "") >= start);
     }
     if let Some(end) = end_date {
-        data.retain(|d| d.date.replace("-", "") <= end.to_string());
+        data.retain(|d| d.date.replace("-", "") <= end);
     }
 
     Ok(data)
@@ -279,6 +279,7 @@ fn parse_hold_pos_html(
 
     let row_re = Regex::new(r"<tr[^>]*>([\s\S]*?)</tr>").unwrap();
     let cell_re = Regex::new(r"<td[^>]*>([\s\S]*?)</td>").unwrap();
+    let tag_re = Regex::new(r"<[^>]+>").unwrap();
 
     let value_col_name = match pos_type {
         "volume" => "成交量",
@@ -300,7 +301,6 @@ fn parse_hold_pos_html(
 
         if cells.len() >= 3 {
             let clean_text = |s: &str| -> String {
-                let tag_re = Regex::new(r"<[^>]+>").unwrap();
                 tag_re.replace_all(s, "").trim().to_string()
             };
 

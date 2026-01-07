@@ -113,7 +113,7 @@ pub async fn get_futures_inventory_99(symbol: &str) -> Result<Vec<FuturesInvento
     if let Some(list) = json_data["props"]["pageProps"]["data"]["positionTrendChartListData"]["list"].as_array() {
         for item in list {
             if let Some(arr) = item.as_array() {
-                let date = arr.get(0).and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let date = arr.first().and_then(|v| v.as_str()).unwrap_or("").to_string();
 
                 let close_price = arr.get(1).and_then(|v| {
                     if v.is_null() {
@@ -130,10 +130,8 @@ pub async fn get_futures_inventory_99(symbol: &str) -> Result<Vec<FuturesInvento
                         None
                     } else if let Some(n) = v.as_i64() {
                         Some(n as f64)
-                    } else if let Some(n) = v.as_f64() {
-                        Some(n)
                     } else {
-                        None
+                        v.as_f64()
                     }
                 });
 

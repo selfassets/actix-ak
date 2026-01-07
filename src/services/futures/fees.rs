@@ -346,7 +346,7 @@ fn parse_futures_rule_html(html: &str) -> Result<Vec<FuturesRule>> {
         }
 
         if cells.len() >= 6 {
-            let exchange = cells.get(0).cloned().unwrap_or_default();
+            let exchange = cells.first().cloned().unwrap_or_default();
             let product = cells.get(1).cloned().unwrap_or_default();
             let code = cells.get(2).cloned().unwrap_or_default();
 
