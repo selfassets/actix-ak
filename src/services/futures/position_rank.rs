@@ -658,7 +658,7 @@ fn parse_dce_table_section(lines: &[&str], start: usize, end: usize) -> Vec<(Str
         }
 
         let fields: Vec<&str> = line
-            .split(|c| c == '\t' || c == ' ')
+            .split(['\t', ' '])
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -877,10 +877,7 @@ fn parse_dce_rank_section(lines: &[&str], start: usize, end: usize) -> Vec<(Stri
             continue;
         }
 
-        let fields: Vec<&str> = line
-            .split(|c| c == '\t')
-            .filter(|s| !s.is_empty())
-            .collect();
+        let fields: Vec<&str> = line.split('\t').filter(|s| !s.is_empty()).collect();
 
         let fields = if fields.len() < 4 {
             line.split_whitespace().collect::<Vec<&str>>()
