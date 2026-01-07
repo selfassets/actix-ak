@@ -4,7 +4,7 @@
 *.pdb
 
 # Cargo
-Cargo.lock
+# Cargo.lock  # 已注释：可执行应用应提交 Cargo.lock 以确保构建可重复性
 
 # IDE
 .vscode/
