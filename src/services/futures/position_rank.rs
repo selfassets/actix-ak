@@ -225,10 +225,7 @@ pub async fn get_shfe_rank_table(
             variety,
         };
 
-        symbol_data
-            .entry(symbol)
-            .or_insert_with(Vec::new)
-            .push(data);
+        symbol_data.entry(symbol).or_default().push(data);
     }
 
     let mut result: Vec<RankTableResponse> = symbol_data
@@ -348,10 +345,7 @@ pub async fn get_cffex_rank_table(
                 variety,
             };
 
-            symbol_data
-                .entry(symbol)
-                .or_insert_with(Vec::new)
-                .push(data);
+            symbol_data.entry(symbol).or_default().push(data);
         }
 
         for (symbol, data) in symbol_data {
@@ -425,17 +419,17 @@ pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
 
     let mut symbol_data: HashMap<String, Vec<PositionRankData>> = HashMap::new();
     let mut current_symbol = String::new();
+    let symbol_re = Regex::new(r"([A-Za-z]+\d+)").unwrap();
 
     for row in range.rows() {
-        if row.len() == 0 {
+        if row.is_empty() {
             continue;
         }
 
         let first_cell = row[0].to_string();
 
         if first_cell.contains("品种") || first_cell.contains("合约") {
-            let re = Regex::new(r"([A-Za-z]+\d+)").unwrap();
-            if let Some(cap) = re.captures(&first_cell) {
+            if let Some(cap) = symbol_re.captures(&first_cell) {
                 current_symbol = cap
                     .get(1)
                     .map(|m| m.as_str().to_uppercase())
@@ -479,10 +473,7 @@ pub async fn get_rank_table_czce(date: &str) -> Result<Vec<RankTableResponse>> {
                 variety,
             };
 
-            symbol_data
-                .entry(current_symbol.clone())
-                .or_insert_with(Vec::new)
-                .push(data);
+            symbol_data.entry(current_symbol.clone()).or_default().push(data);
         }
     }
 
