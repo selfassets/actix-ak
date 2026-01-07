@@ -43,7 +43,7 @@ use crate::models::{
     FuturesSpotPricePrevious, FuturesSpotPricePreviousQuery,
     FuturesSpotPriceDailyQuery
 };
-use crate::services::futures_service::{
+use crate::services::futures::{
     FuturesService, get_futures_history, get_futures_minute_data,
     get_foreign_futures_symbols, get_foreign_futures_realtime,
     get_futures_display_main_sina, get_futures_main_sina, get_futures_hold_pos_sina,
