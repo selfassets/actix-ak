@@ -651,8 +651,8 @@ pub async fn get_dce_rank_table(
 fn parse_dce_table_section(lines: &[&str], start: usize, end: usize) -> Vec<(String, i64, i64)> {
     let mut result = Vec::new();
 
-    for i in (start + 1)..end {
-        let line = lines[i].trim();
+    for line in lines.iter().take(end).skip(start + 1) {
+        let line = line.trim();
         if line.is_empty() || line.contains("总计") || line.contains("合计") {
             continue;
         }
