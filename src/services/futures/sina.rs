@@ -476,11 +476,11 @@ impl FuturesService {
     fn format_symbol_for_realtime(&self, symbol: &str) -> String {
         let symbol_upper = symbol.to_uppercase();
 
-        if symbol_upper.starts_with("NF_") {
-            return format!("nf_{}", &symbol_upper[3..]);
+        if let Some(stripped) = symbol_upper.strip_prefix("NF_") {
+            return format!("nf_{}", stripped);
         }
-        if symbol_upper.starts_with("CFF_") {
-            return format!("CFF_{}", &symbol_upper[4..]);
+        if let Some(stripped) = symbol_upper.strip_prefix("CFF_") {
+            return format!("CFF_{}", stripped);
         }
 
         if self.is_cffex_symbol(&symbol_upper) {
