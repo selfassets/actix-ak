@@ -9,15 +9,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 先复制依赖文件，利用 Docker 缓存
+# 复制项目文件
 COPY Cargo.toml Cargo.lock ./
-
-# 创建虚拟 src 目录用于预编译依赖
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release && rm -rf src target/release/deps/actix_ak*
-
-# 复制实际源码并构建
 COPY src ./src
+
+# 构建项目
 RUN cargo build --release
 
 # 运行阶段
