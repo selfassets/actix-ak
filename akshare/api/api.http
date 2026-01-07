@@ -1,0 +1,115 @@
+### 获取大连商品交易所的品种代码
+GET http://localhost:8000/open/future?action=subscribe_exchange&symbol=dce
+Content-Type: application/json
+
+### 获取郑州商品交易所的品种代码
+GET http://localhost:8000/open/future?action=subscribe_exchange&symbol=czce
+Content-Type: application/json
+
+### 获取上海期货交易所的品种代码
+GET http://localhost:8000/open/future?action=subscribe_exchange&symbol=shfe
+Content-Type: application/json
+
+### 获取中国金融期货交易所的品种代码
+GET http://localhost:8000/open/future?action=subscribe_exchange&symbol=cffex
+Content-Type: application/json
+
+### 获取广州期货交易所的品种代码
+GET http://localhost:8000/open/future?action=subscribe_exchange&symbol=gfex
+Content-Type: application/json
+
+
+### 获取上海期货交易所的主力合约
+GET http://localhost:8000/open/future?action=match_main_contract&symbol=shfe
+Content-Type: application/json
+
+### 获取大连商品交易所的主力合约
+GET http://localhost:8000/open/future?action=match_main_contract&symbol=dce
+Content-Type: application/json
+
+### 获取郑州商品交易所的主力合约
+GET http://localhost:8000/open/future?action=match_main_contract&symbol=czce
+Content-Type: application/json
+
+### 获取中国金融期货交易所的主力合约
+GET http://localhost:8000/open/future?action=match_main_contract&symbol=cffex
+Content-Type: application/json
+
+### 获取广州期货交易所的主力合约
+GET http://localhost:8000/open/future?action=match_main_contract&symbol=gfex
+Content-Type: application/json
+
+
+### ==================== 通用 API 接口示例 ====================
+
+### 示例1: 无参数调用 - 获取期货交易费用信息
+GET http://localhost:8000/open/api/futures_fees_info
+Content-Type: application/json
+
+### 示例2: 带参数调用 - 获取新浪期货日数据
+GET http://localhost:8000/open/api/futures_zh_daily_sina?symbol=RB0
+Content-Type: application/json
+
+### 示例3: 带多个参数 - 获取期货历史数据
+GET http://localhost:8000/open/api/futures_hist_em?symbol=热卷主连&period=daily&start_date=20240101&end_date=20241231
+Content-Type: application/json
+
+### 示例4: 获取主力连续合约品种一览表
+GET http://localhost:8000/open/api/futures_display_main_sina
+Content-Type: application/json
+
+### 示例5: 获取指定交易所库存数据
+GET http://localhost:8000/open/api/futures_inventory_99?symbol=豆一
+Content-Type: application/json
+
+### 示例6: 获取新浪期货主力连续日数据 - 默认参数(V0品种)
+GET http://localhost:8000/open/api/futures_main_sina
+Content-Type: application/json
+
+### 示例7: 获取新浪期货主力连续日数据 - 指定品种(螺纹钢)
+GET http://localhost:8000/open/api/futures_main_sina?symbol=RB0
+Content-Type: application/json
+
+### 示例8: 获取新浪期货主力连续日数据 - 指定品种和日期范围
+GET http://localhost:8000/open/api/futures_main_sina?symbol=RB0&start_date=20240101&end_date=20241231
+Content-Type: application/json
+
+### 示例9: 获取新浪期货主力连续日数据 - 铁矿石主力
+GET http://localhost:8000/open/api/futures_main_sina?symbol=I0&start_date=20240601&end_date=20241206
+Content-Type: application/json
+
+### 示例10: 获取新浪期货主力连续日数据 - 豆粕主力
+GET http://localhost:8000/open/api/futures_main_sina?symbol=M0&start_date=20240101&end_date=20241231
+Content-Type: application/json
+
+### 示例11: 获取新浪财经期货品种标记 - 默认参数
+GET http://localhost:8000/open/api/futures_symbol_mark
+Content-Type: application/json
+
+### 示例12: 获取新浪财经期货品种标记 - 指定交易所(大连商品交易所)
+GET http://localhost:8000/open/api/futures_symbol_mark?symbol=大连商品交易所
+Content-Type: application/json
+
+### 示例13: 获取新浪财经期货品种标记 - 指定交易所(上海期货交易所)
+GET http://localhost:8000/open/api/futures_symbol_mark?symbol=上海期货交易所
+Content-Type: application/json
+
+### 示例14: 获取新浪财经期货品种标记 - 指定交易所(郑州商品交易所)
+GET http://localhost:8000/open/api/futures_symbol_mark
+Content-Type: application/json
+
+### 示例15: 获取期货实时数据 v1版本 - 默认品种(pta_qh)
+GET http://localhost:8000/open/api/futures_zh_realtime_v1
+Content-Type: application/json
+
+### 示例16: 获取期货实时数据 v1版本 - PTA品种
+GET http://localhost:8000/open/api/futures_zh_realtime_v1?node=pta_qh
+Content-Type: application/json
+
+### 示例17: 获取期货实时数据 v1版本 - 螺纹钢品种  
+GET http://localhost:8000/open/api/futures_zh_realtime_v1?node=lw_qh
+Content-Type: application/json
+
+### 示例18: 获取期货实时数据 v1版本 - 工业硅品种
+GET http://localhost:8000/open/api/futures_zh_realtime_v1?node=si_qh
+Content-Type: application/json
