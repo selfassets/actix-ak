@@ -131,9 +131,7 @@ pub async fn futures_warehouse_receipt_czce(
         }
 
         let mut data: Vec<CzceWarehouseReceipt> = Vec::new();
-        for row_idx in (header_idx + 1)..end_idx {
-            let row = &rows[row_idx];
-
+        for row in rows.iter().take(end_idx).skip(header_idx + 1) {
             if row.is_empty()
                 || row[0].is_empty()
                 || row[0].contains("合计")
@@ -142,7 +140,7 @@ pub async fn futures_warehouse_receipt_czce(
                 continue;
             }
 
-            let warehouse = row.get(0).cloned().unwrap_or_default().trim().to_string();
+            let warehouse = row.first().cloned().unwrap_or_default().trim().to_string();
             if warehouse.is_empty() {
                 continue;
             }
@@ -156,9 +154,9 @@ pub async fn futures_warehouse_receipt_czce(
                 }
             };
 
-            let warehouse_receipt = row.get(1).map(|s| parse_num(s)).flatten();
-            let valid_forecast = row.get(2).map(|s| parse_num(s)).flatten();
-            let change = row.get(3).map(|s| parse_num(s)).flatten();
+            let warehouse_receipt = row.get(1).and_then(|s| parse_num(s));
+            let valid_forecast = row.get(2).and_then(|s| parse_num(s));
+            let change = row.get(3).and_then(|s| parse_num(s));
 
             data.push(CzceWarehouseReceipt {
                 warehouse,
