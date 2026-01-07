@@ -93,6 +93,8 @@ impl FuturesService {
             ("gfex", "广州期货交易所"),
         ];
 
+        let item_re = Regex::new(r"\['([^']+)',\s*'([^']+)',\s*'[^']*'").unwrap();
+
         for (exchange_code, exchange_name) in exchanges {
             let pattern = format!(r"{}\s*:\s*\[", exchange_code);
             let re = Regex::new(&pattern).unwrap();
@@ -100,8 +102,6 @@ impl FuturesService {
             if let Some(m) = re.find(content) {
                 let start_pos = m.end();
                 let remaining = &content[start_pos..];
-
-                let item_re = Regex::new(r"\['([^']+)',\s*'([^']+)',\s*'[^']*'").unwrap();
 
                 for cap in item_re.captures_iter(remaining) {
                     let symbol_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
