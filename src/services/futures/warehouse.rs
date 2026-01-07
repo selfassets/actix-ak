@@ -376,10 +376,7 @@ pub async fn futures_shfe_warehouse_receipt(
             unit,
         };
 
-        grouped
-            .entry(var_name)
-            .or_insert_with(Vec::new)
-            .push(receipt);
+        grouped.entry(var_name).or_default().push(receipt);
     }
 
     let mut result: Vec<ShfeWarehouseReceiptResponse> = grouped
