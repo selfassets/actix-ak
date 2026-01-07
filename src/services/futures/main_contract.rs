@@ -158,10 +158,10 @@ pub async fn get_futures_main_sina(
     let mut data = parse_main_daily_data(&text)?;
 
     if let Some(start) = start_date {
-        data.retain(|d| d.date.replace("-", "") >= start);
+        data.retain(|d| d.date.replace("-", "").as_str() >= start);
     }
     if let Some(end) = end_date {
-        data.retain(|d| d.date.replace("-", "") <= end);
+        data.retain(|d| d.date.replace("-", "").as_str() <= end);
     }
 
     Ok(data)
