@@ -1,6 +1,7 @@
 ---
 layout: default
 title: 健康检查
+nav_order: 2
 permalink: /health/
 ---
 
