@@ -1,3 +1,9 @@
+---
+layout: default
+title: 期货接口
+permalink: /futures/
+---
+
 # 期货接口
 
 提供国内期货和外盘期货的实时行情、历史数据、持仓排名等信息。
@@ -6,7 +12,7 @@
 
 - [交易所和品种](#交易所和品种)
 - [实时行情](#实时行情)
-- [K线数据](#k线数据)
+- [K 线数据](#k线数据)
 - [主力连续合约](#主力连续合约)
 - [持仓排名](#持仓排名)
 - [交易费用和规则](#交易费用和规则)
@@ -29,7 +35,7 @@ curl -X GET "{{baseUrl}}/futures/exchanges" \
 
 ### GET /futures/symbols
 
-获取所有品种映射表（从新浪JS动态解析）。
+获取所有品种映射表（从新浪 JS 动态解析）。
 
 ```bash
 curl -X GET "{{baseUrl}}/futures/symbols" \
@@ -41,13 +47,13 @@ curl -X GET "{{baseUrl}}/futures/symbols" \
 获取指定交易所的品种列表。
 
 **路径参数**：
+
 - `exchange`: 交易所代码（SHFE/DCE/CZCE/CFFEX）
 
 ```bash
 curl -X GET "{{baseUrl}}/futures/symbols/SHFE" \
   -H "Authorization: Bearer {{token}}"
 ```
-
 
 ---
 
@@ -58,6 +64,7 @@ curl -X GET "{{baseUrl}}/futures/symbols/SHFE" \
 获取单个合约实时数据。
 
 **路径参数**：
+
 - `symbol`: 合约代码（如 CU2602, RB2605, IF2603）
 
 ```bash
@@ -83,6 +90,7 @@ curl -X POST "{{baseUrl}}/futures/batch" \
 获取品种所有合约实时数据（按品种名称）。
 
 **路径参数**：
+
 - `symbol`: 品种名称（如 沪铜、螺纹钢）
 
 ```bash
@@ -95,6 +103,7 @@ curl -X GET "{{baseUrl}}/futures/realtime/沪铜" \
 获取期货列表（按交易所筛选）。
 
 **查询参数**：
+
 - `exchange`: 交易所代码（可选）
 - `limit`: 返回数量限制（可选）
 
@@ -112,17 +121,17 @@ curl -X GET "{{baseUrl}}/futures/CU2602/detail" \
   -H "Authorization: Bearer {{token}}"
 ```
 
-
 ---
 
-## K线数据
+## K 线数据
 
 ### GET /futures/{symbol}/history
 
-获取日K线历史数据。
+获取日 K 线历史数据。
 
 **查询参数**：
-- `limit`: 返回数量限制（可选，默认30）
+
+- `limit`: 返回数量限制（可选，默认 30）
 
 ```bash
 curl -X GET "{{baseUrl}}/futures/CU2602/history?limit=10" \
@@ -131,10 +140,11 @@ curl -X GET "{{baseUrl}}/futures/CU2602/history?limit=10" \
 
 ### GET /futures/{symbol}/minute
 
-获取分钟K线数据。
+获取分钟 K 线数据。
 
 **查询参数**：
-- `period`: K线周期（1/5/15/30/60，默认5）
+
+- `period`: K 线周期（1/5/15/30/60，默认 5）
 
 ```bash
 # 5分钟K线
@@ -170,9 +180,10 @@ curl -X GET "{{baseUrl}}/futures/main/SHFE" \
 
 ### GET /futures/main/{symbol}/daily
 
-获取主力连续日K线数据。
+获取主力连续日 K 线数据。
 
 **查询参数**：
+
 - `start_date`: 开始日期（YYYYMMDD）
 - `end_date`: 结束日期（YYYYMMDD）
 
@@ -180,7 +191,6 @@ curl -X GET "{{baseUrl}}/futures/main/SHFE" \
 curl -X GET "{{baseUrl}}/futures/main/RB0/daily?start_date=20240101&end_date=20240301" \
   -H "Authorization: Bearer {{token}}"
 ```
-
 
 ---
 
@@ -191,6 +201,7 @@ curl -X GET "{{baseUrl}}/futures/main/RB0/daily?start_date=20240101&end_date=202
 获取期货持仓排名数据。
 
 **查询参数**：
+
 - `pos_type`: 排名类型（volume/long/short）
 - `contract`: 合约代码
 - `date`: 日期（YYYYMMDD）
@@ -227,6 +238,7 @@ curl -X GET "{{baseUrl}}/futures/fees" \
 获取期货手续费信息（九期网）。
 
 **查询参数**：
+
 - `exchange`: 交易所名称（可选，如 上期所）
 
 ```bash
@@ -244,6 +256,7 @@ curl -X GET "{{baseUrl}}/futures/comm_info?exchange=上期所" \
 获取期货交易规则。
 
 **查询参数**：
+
 - `date`: 日期（YYYYMMDD，可选）
 
 ```bash
@@ -251,14 +264,13 @@ curl -X GET "{{baseUrl}}/futures/rule?date=20250328" \
   -H "Authorization: Bearer {{token}}"
 ```
 
-
 ---
 
 ## 库存数据
 
 ### GET /futures/inventory99/symbols
 
-获取99期货网品种映射表。
+获取 99 期货网品种映射表。
 
 ```bash
 curl -X GET "{{baseUrl}}/futures/inventory99/symbols" \
@@ -267,9 +279,10 @@ curl -X GET "{{baseUrl}}/futures/inventory99/symbols" \
 
 ### GET /futures/inventory99
 
-获取99期货网库存数据。
+获取 99 期货网库存数据。
 
 **查询参数**：
+
 - `symbol`: 品种名称（如 豆一）
 
 ```bash
@@ -286,6 +299,7 @@ curl -X GET "{{baseUrl}}/futures/inventory99?symbol=豆一" \
 获取现货价格及基差数据。
 
 **查询参数**：
+
 - `date`: 日期（YYYYMMDD）
 - `symbols`: 品种代码，逗号分隔（可选）
 
@@ -296,9 +310,10 @@ curl -X GET "{{baseUrl}}/futures/spot_price?date=20240430&symbols=RB,CU" \
 
 ### GET /futures/spot_price_previous
 
-获取现货价格历史数据（含180日统计）。
+获取现货价格历史数据（含 180 日统计）。
 
 **查询参数**：
+
 - `date`: 日期（YYYYMMDD）
 
 ```bash
@@ -311,6 +326,7 @@ curl -X GET "{{baseUrl}}/futures/spot_price_previous?date=20240430" \
 获取现货价格日线数据（日期范围）。
 
 **查询参数**：
+
 - `start_date`: 开始日期（YYYYMMDD）
 - `end_date`: 结束日期（YYYYMMDD）
 - `symbols`: 品种代码，逗号分隔（可选）
@@ -319,7 +335,6 @@ curl -X GET "{{baseUrl}}/futures/spot_price_previous?date=20240430" \
 curl -X GET "{{baseUrl}}/futures/spot_price_daily?start_date=20240101&end_date=20240105&symbols=RB,CU" \
   -H "Authorization: Bearer {{token}}"
 ```
-
 
 ---
 
@@ -368,7 +383,7 @@ curl -X POST "{{baseUrl}}/futures/foreign/realtime" \
 
 ### GET /futures/foreign/{symbol}/history
 
-获取外盘期货历史数据（日K线）。
+获取外盘期货历史数据（日 K 线）。
 
 ```bash
 curl -X GET "{{baseUrl}}/futures/foreign/GC/history" \

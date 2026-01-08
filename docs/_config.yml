@@ -1,8 +1,12 @@
 title: AkShare Backend API
 description: 期货和股票数据 RESTful API 服务文档
 theme: jekyll-theme-cayman
+url: "https://byteappua-actix-ak.zeabur.app"
 baseurl: ""
-url: ""
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
 
 markdown: kramdown
 highlighter: rouge

@@ -1,3 +1,9 @@
+---
+layout: default
+title: 健康检查
+permalink: /health/
+---
+
 # 健康检查
 
 检测服务是否正常运行。
