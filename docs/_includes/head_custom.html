@@ -1,6 +1,17 @@
 <style>
-  /* Aggressively override Just the Docs content width */
-   .main-content {
+  /* Shrink sidebar width */
+  @media (min-width: 50em) {
+    .side-bar {
+      width: 200px !important;
+      min-width: 200px !important;
+    }
+    .main-content-wrap {
+      margin-left: 200px !important;
+    }
+  }
+
+  /* Keep content width optimized */
+  .main-content {
     max-width: 100% !important;
     margin-left: 20px;
   }
