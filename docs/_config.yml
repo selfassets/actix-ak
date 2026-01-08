@@ -6,7 +6,7 @@ baseurl: ""
 
 # Theme Settings
 search_enabled: true
-heading_anchors: true
+heading_anchors: false
 
 # SEO & Sitemap
 plugins:
