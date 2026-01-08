@@ -5,7 +5,7 @@
     "workers": 0
   },
   "api": {
-    "api_key": "",
+    "api_key": "12345678",
     "timeout_secs": 30,
     "connect_timeout_secs": 10
   },
