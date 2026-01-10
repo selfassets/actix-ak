@@ -21,6 +21,16 @@ pub struct StockInfo {
     pub change_percent: f64,
     /// 成交量
     pub volume: u64,
+    /// 成交额
+    pub amount: f64,
+    /// 今开盘
+    pub open: f64,
+    /// 最高价
+    pub high: f64,
+    /// 最低价
+    pub low: f64,
+    /// 昨收盘
+    pub prev_close: f64,
     /// 市值（可选）
     pub market_cap: Option<f64>,
     /// 更新时间

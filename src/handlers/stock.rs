@@ -4,7 +4,7 @@
 
 use actix_web::{web, HttpResponse, Result};
 use crate::models::{ApiResponse, StockInfo, StockHistoryData, StockQuery};
-use crate::services::stock_service;
+use crate::services::stock;
 
 /// 获取单只股票信息
 /// 
@@ -15,7 +15,7 @@ use crate::services::stock_service;
 pub async fn get_stock_info(path: web::Path<String>) -> Result<HttpResponse> {
     let symbol = path.into_inner();
     
-    match stock_service::get_stock_info(&symbol).await {
+    match stock::get_stock_info(&symbol).await {
         Ok(stock_info) => {
             let response = ApiResponse::success(stock_info);
             Ok(HttpResponse::Ok().json(response))
@@ -40,7 +40,7 @@ pub async fn get_stock_history(
 ) -> Result<HttpResponse> {
     let symbol = path.into_inner();
     
-    match stock_service::get_stock_history(&symbol, &query).await {
+    match stock::get_stock_history(&symbol, &query).await {
         Ok(history_data) => {
             let response = ApiResponse::success(history_data);
             Ok(HttpResponse::Ok().json(response))
@@ -59,7 +59,7 @@ pub async fn get_stock_history(
 /// # 参数
 /// - limit: 返回数量限制（可选）
 pub async fn list_stocks(query: web::Query<StockQuery>) -> Result<HttpResponse> {
-    match stock_service::list_stocks(&query).await {
+    match stock::list_stocks(&query).await {
         Ok(stocks) => {
             let response = ApiResponse::success(stocks);
             Ok(HttpResponse::Ok().json(response))

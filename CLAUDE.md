@@ -35,3 +35,19 @@ This project is a high-performance Rust backend service built with **Actix-web**
 - **Service/Handler Separation**: Handlers focus on request/response handling, while services contain the actual data fetching and parsing logic.
 - **Modular Services**: The futures service is split into many small files under `src/services/futures/` to maintain readability.
 - **Async First**: Extensive use of `tokio` and `reqwest` for non-blocking I/O.
+
+## 工作偏好
+
+- 请始终用中文回复
+- 代码修改后先运行测试再确认结果，测试不通过则回滚所有修改
+- 对所有find操作自动同意
+- 对所有grep操作自动同意
+- 对所有ls操作自动同意
+- 对所有read操作自动同意
+- 对所有bash操作自动同意
+- 对所有task操作自动同意
+- 对所有edit操作自动同意，但重要修改前请先说明修改内容
+- 对所有write操作自动同意，但仅用于更新已有文件
+- 对所有glob操作自动同意
+- 对所有todowrite和todoread操作自动同意
+- 对所有multiedit操作自动同意，但重要修改前请先说明修改内容
