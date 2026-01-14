@@ -1,10 +1,3 @@
----
-layout: default
-title: 健康检查
-nav_order: 2
-permalink: /health/
----
-
 # 健康检查
 
 检测服务是否正常运行。
@@ -31,4 +24,4 @@ curl -X GET "https://byteappua-actix-ak.zeabur.app/api/v1/health"
 
 ---
 
-[返回首页](index)
+[返回首页](index.md)

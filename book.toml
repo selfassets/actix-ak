@@ -1,0 +1,9 @@
+[book]
+authors = ["actix-ak"]
+language = "zh-CN"
+multilingual = false
+src = "docs"
+title = "Actix-AK API Documentation"
+
+[output.html]
+git-repository-url = "https://github.com/dwx/actix-ak"
