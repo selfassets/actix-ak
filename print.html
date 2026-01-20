@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2cb15443.js";
+            window.path_to_searchindex_js = "searchindex-9016fb68.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-282ef506.js"></script>
@@ -270,6 +270,58 @@
   ],
   "error": null
 }
+</code></pre>
+<h3 id="get-futuresrankshfe"><a class="header" href="#get-futuresrankshfe">GET /futures/rank/shfe</a></h3>
+<p>获取上期所持仓排名表（按合约分组）。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 交易日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/shfe?date=20240102&amp;vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresrankcffex"><a class="header" href="#get-futuresrankcffex">GET /futures/rank/cffex</a></h3>
+<p>获取中金所持仓排名表（按合约分组）。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/cffex?date=20240102&amp;vars=IF,IC" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresrankdce"><a class="header" href="#get-futuresrankdce">GET /futures/rank/dce</a></h3>
+<p>获取大商所持仓排名表（按合约分组）。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/dce?date=20240102&amp;vars=M,Y" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresrankczce"><a class="header" href="#get-futuresrankczce">GET /futures/rank/czce</a></h3>
+<p>获取郑商所持仓排名表（按合约分组）。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresrankgfex"><a class="header" href="#get-futuresrankgfex">GET /futures/rank/gfex</a></h3>
+<p>获取广期所持仓排名表（按合约分组）。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/gfex?date=20240102&amp;vars=SI,LC" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresranksum"><a class="header" href="#get-futuresranksum">GET /futures/rank/sum</a></h3>
+<p>获取持仓排名汇总（单日）。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 交易日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/sum?date=20240102&amp;vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futuresranksum_daily"><a class="header" href="#get-futuresranksum_daily">GET /futures/rank/sum_daily</a></h3>
+<p>获取持仓排名汇总（日期区间）。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>start_date</code>: 开始日期（YYYYMMDD）</li>
+<li><code>end_date</code>: 结束日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/rank/sum_daily?start_date=20240102&amp;end_date=20240110&amp;vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
 </code></pre>
 <h3 id="get-futuressymbols"><a class="header" href="#get-futuressymbols">GET /futures/symbols</a></h3>
 <p>获取所有品种映射表（从新浪 JS 动态解析）。</p>
