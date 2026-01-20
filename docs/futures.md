@@ -50,6 +50,87 @@ curl -X GET "{{baseUrl}}/futures/exchanges" \
 }
 ```
 
+### GET /futures/rank/shfe
+
+获取上期所持仓排名表（按合约分组）。
+
+**查询参数**：
+
+- `date`: 交易日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+**请求示例**
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/shfe?date=20240102&vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/cffex
+
+获取中金所持仓排名表（按合约分组）。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/cffex?date=20240102&vars=IF,IC" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/dce
+
+获取大商所持仓排名表（按合约分组）。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/dce?date=20240102&vars=M,Y" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/czce
+
+获取郑商所持仓排名表（按合约分组）。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/gfex
+
+获取广期所持仓排名表（按合约分组）。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/gfex?date=20240102&vars=SI,LC" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/sum
+
+获取持仓排名汇总（单日）。
+
+**查询参数**：
+
+- `date`: 交易日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/sum?date=20240102&vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/rank/sum_daily
+
+获取持仓排名汇总（日期区间）。
+
+**查询参数**：
+
+- `start_date`: 开始日期（YYYYMMDD）
+- `end_date`: 结束日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+```bash
+curl -X GET "{{baseUrl}}/futures/rank/sum_daily?start_date=20240102&end_date=20240110&vars=CU,AL" \
+  -H "Authorization: Bearer {{token}}"
+```
+
 ### GET /futures/symbols
 
 获取所有品种映射表（从新浪 JS 动态解析）。

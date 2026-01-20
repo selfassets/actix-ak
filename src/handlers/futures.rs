@@ -41,7 +41,9 @@ use crate::models::{
     Futures99Symbol, FuturesInventory99, FuturesInventory99Query,
     FuturesSpotPrice, FuturesSpotPriceQuery,
     FuturesSpotPricePrevious, FuturesSpotPricePreviousQuery,
-    FuturesSpotPriceDailyQuery
+    FuturesSpotPriceDailyQuery, RankTableQuery, RankSumDailyQuery, RankTableResponse,
+    RankSum, CzceWarehouseReceiptResponse, DceWarehouseReceipt,
+    ShfeWarehouseReceiptResponse, GfexWarehouseReceiptResponse
 };
 use crate::services::futures::{
     FuturesService, get_futures_history, get_futures_minute_data,
@@ -50,7 +52,11 @@ use crate::services::futures::{
     get_futures_foreign_hist, get_futures_foreign_detail, get_futures_fees_info,
     get_futures_comm_info, get_futures_rule,
     get_99_symbol_map, get_futures_inventory_99, get_futures_spot_price,
-    get_futures_spot_price_previous, get_futures_spot_price_daily
+    get_futures_spot_price_previous, get_futures_spot_price_daily,
+    get_shfe_rank_table, get_cffex_rank_table, get_dce_rank_table, get_rank_table_czce,
+    get_gfex_rank_table, get_rank_sum, get_rank_sum_daily,
+    futures_warehouse_receipt_czce, futures_warehouse_receipt_dce,
+    futures_shfe_warehouse_receipt, futures_gfex_warehouse_receipt
 };
 
 /// 获取单个期货合约实时数据
@@ -72,6 +78,135 @@ pub async fn get_futures_info(path: web::Path<String>) -> Result<HttpResponse> {
             let response = ApiResponse::<FuturesInfo>::error(e.to_string());
             Ok(HttpResponse::InternalServerError().json(response))
         }
+    }
+}
+
+/// 获取上期所持仓排名表
+/// GET /futures/rank/shfe?date=20240102&vars=CU,AL
+pub async fn get_rank_shfe(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect());
+
+    match get_shfe_rank_table(&query.date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankTableResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取中金所持仓排名表
+/// GET /futures/rank/cffex?date=20240102&vars=IF,IC
+pub async fn get_rank_cffex(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect());
+
+    match get_cffex_rank_table(&query.date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankTableResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取大商所持仓排名表
+/// GET /futures/rank/dce?date=20240102&vars=M,Y
+pub async fn get_rank_dce(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect());
+
+    match get_dce_rank_table(&query.date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankTableResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取郑商所持仓排名表
+/// GET /futures/rank/czce?date=20240102
+pub async fn get_rank_czce(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    match get_rank_table_czce(&query.date).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankTableResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取广期所持仓排名表
+/// GET /futures/rank/gfex?date=20240102&vars=SI,LC
+pub async fn get_rank_gfex(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect());
+
+    match get_gfex_rank_table(&query.date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankTableResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取持仓排名汇总
+/// GET /futures/rank/sum?date=20240102&vars=CU,AL
+pub async fn get_rank_sum_data(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect());
+
+    match get_rank_sum(&query.date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankSum>>::error(e.to_string()))),
+    }
+}
+
+/// 获取持仓排名汇总（日期区间）
+/// GET /futures/rank/sum_daily?start_date=20240102&end_date=20240110&vars=CU,AL
+pub async fn get_rank_sum_daily_data(query: web::Query<RankSumDailyQuery>) -> Result<HttpResponse> {
+    let vars = query
+        .vars
+        .as_ref()
+        .map(|v| v.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect());
+
+    match get_rank_sum_daily(&query.start_date, &query.end_date, vars).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<RankSum>>::error(e.to_string()))),
+    }
+}
+
+/// 获取郑商所仓单日报
+/// GET /futures/warehouse/czce?date=20240102
+pub async fn get_warehouse_czce(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    match futures_warehouse_receipt_czce(&query.date).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<CzceWarehouseReceiptResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取大商所仓单日报
+/// GET /futures/warehouse/dce?date=20240102
+pub async fn get_warehouse_dce(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    match futures_warehouse_receipt_dce(&query.date).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<DceWarehouseReceipt>>::error(e.to_string()))),
+    }
+}
+
+/// 获取上期所仓单日报
+/// GET /futures/warehouse/shfe?date=20240102
+pub async fn get_warehouse_shfe(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    match futures_shfe_warehouse_receipt(&query.date).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<ShfeWarehouseReceiptResponse>>::error(e.to_string()))),
+    }
+}
+
+/// 获取广期所仓单日报
+/// GET /futures/warehouse/gfex?date=20240102
+pub async fn get_warehouse_gfex(query: web::Query<RankTableQuery>) -> Result<HttpResponse> {
+    match futures_gfex_warehouse_receipt(&query.date).await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(e) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<Vec<GfexWarehouseReceiptResponse>>::error(e.to_string()))),
     }
 }
 
@@ -550,6 +685,19 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/spot_price", web::get().to(get_spot_price))
             .route("/spot_price_previous", web::get().to(get_spot_price_previous))
             .route("/spot_price_daily", web::get().to(get_spot_price_daily))
+            // 持仓排名表与汇总
+            .route("/rank/shfe", web::get().to(get_rank_shfe))
+            .route("/rank/cffex", web::get().to(get_rank_cffex))
+            .route("/rank/dce", web::get().to(get_rank_dce))
+            .route("/rank/czce", web::get().to(get_rank_czce))
+            .route("/rank/gfex", web::get().to(get_rank_gfex))
+            .route("/rank/sum", web::get().to(get_rank_sum_data))
+            .route("/rank/sum_daily", web::get().to(get_rank_sum_daily_data))
+            // 仓单日报
+            .route("/warehouse/czce", web::get().to(get_warehouse_czce))
+            .route("/warehouse/dce", web::get().to(get_warehouse_dce))
+            .route("/warehouse/shfe", web::get().to(get_warehouse_shfe))
+            .route("/warehouse/gfex", web::get().to(get_warehouse_gfex))
             // 主力连续合约
             .route("/main/display", web::get().to(get_display_main_contracts))
             .route("/main/{symbol}/daily", web::get().to(get_main_daily))
