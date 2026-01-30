@@ -285,6 +285,69 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ### ============================================================
+### 期货 - 持仓排名表（按交易所）
+### ============================================================
+
+### 获取上期所持仓排名表
+GET {{baseUrl}}/futures/rank/shfe?date=20240102&vars=CU,AL
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取中金所持仓排名表
+GET {{baseUrl}}/futures/rank/cffex?date=20240102&vars=IF,IC
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取大商所持仓排名表
+GET {{baseUrl}}/futures/rank/dce?date=20240102&vars=M,Y
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取郑商所持仓排名表
+GET {{baseUrl}}/futures/rank/czce?date=20240102
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取广期所持仓排名表
+GET {{baseUrl}}/futures/rank/gfex?date=20240102&vars=SI,LC
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取持仓排名汇总
+GET {{baseUrl}}/futures/rank/sum?date=20240102&vars=CU,AL
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取持仓排名汇总（日期区间）
+GET {{baseUrl}}/futures/rank/sum_daily?start_date=20240102&end_date=20240110&vars=CU,AL
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ============================================================
+### 期货 - 仓单日报（按交易所）
+### ============================================================
+
+### 获取郑商所仓单日报
+GET {{baseUrl}}/futures/warehouse/czce?date=20240102
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取大商所仓单日报
+GET {{baseUrl}}/futures/warehouse/dce?date=20240102
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取上期所仓单日报
+GET {{baseUrl}}/futures/warehouse/shfe?date=20240102
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取广期所仓单日报
+GET {{baseUrl}}/futures/warehouse/gfex?date=20240102
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ============================================================
 ### 股票接口
 ### ============================================================
 
