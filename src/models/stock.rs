@@ -1,13 +1,14 @@
 //! 股票数据模型
-//! 
+//!
 //! 定义股票相关的数据结构
 
 use serde::{Deserialize, Serialize};
 
 /// 股票基本信息
-/// 
+///
 /// 包含股票的实时行情数据
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema))]
 pub struct StockInfo {
     /// 股票代码
     pub symbol: String,
@@ -38,9 +39,10 @@ pub struct StockInfo {
 }
 
 /// 股票历史K线数据
-/// 
+///
 /// 包含单日的 OHLCV 数据
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema))]
 pub struct StockHistoryData {
     /// 股票代码
     pub symbol: String,
@@ -61,6 +63,7 @@ pub struct StockHistoryData {
 /// 股票查询参数
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema, utoipa::IntoParams))]
 pub struct StockQuery {
     /// 股票代码
     pub symbol: Option<String>,

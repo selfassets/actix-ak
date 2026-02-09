@@ -3,9 +3,9 @@
 //! 通过 Header 中的 Authorization: Bearer <token> 进行认证
 
 use actix_web::{
+    body::EitherBody,
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error, HttpResponse,
-    body::EitherBody,
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use std::rc::Rc;
@@ -63,8 +63,12 @@ where
         let api_key = self.api_key.clone();
 
         Box::pin(async move {
-            // 跳过健康检查接口
-            if req.path().ends_with("/health") {
+            // 跳过不需要认证的路径
+            let path = req.path();
+            if path.ends_with("/health")
+                || path.starts_with("/swagger-ui")
+                || path.starts_with("/api-docs")
+            {
                 let res = service.call(req).await?;
                 return Ok(res.map_into_left_body());
             }
@@ -82,12 +86,11 @@ where
                     Ok(res.map_into_left_body())
                 }
                 _ => {
-                    let response = HttpResponse::Unauthorized()
-                        .json(serde_json::json!({
-                            "code": 401,
-                            "message": "无效的 Bearer Token",
-                            "data": null
-                        }));
+                    let response = HttpResponse::Unauthorized().json(serde_json::json!({
+                        "code": 401,
+                        "message": "无效的 Bearer Token",
+                        "data": null
+                    }));
                     Ok(req.into_response(response).map_into_right_body())
                 }
             }

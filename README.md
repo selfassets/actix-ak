@@ -15,10 +15,12 @@
 - 🏥 健康检查接口
 - 📝 结构化API响应
 - ⏱️ 请求超时保护（防止连接挂起）
+- 📖 **Swagger UI 接口文档**（开发模式）
 
 ## API 接口
 
 ### 健康检查
+
 ```
 GET /api/v1/health
 ```
@@ -26,16 +28,19 @@ GET /api/v1/health
 ### 股票相关接口
 
 #### 获取股票列表
+
 ```
 GET /api/v1/stocks?limit=10
 ```
 
 #### 获取单个股票信息
+
 ```
 GET /api/v1/stocks/{symbol}
 ```
 
 #### 获取股票历史数据
+
 ```
 GET /api/v1/stocks/{symbol}/history?start_date=2024-01-01&end_date=2024-01-31&limit=30
 ```
@@ -43,26 +48,31 @@ GET /api/v1/stocks/{symbol}/history?start_date=2024-01-01&end_date=2024-01-31&li
 ### 期货相关接口
 
 #### 获取期货列表（主力合约）
+
 ```
 GET /api/v1/futures?exchange=DCE&limit=10
 ```
 
 #### 获取单个期货合约信息
+
 ```
 GET /api/v1/futures/{symbol}
 ```
 
 #### 获取期货历史数据
+
 ```
 GET /api/v1/futures/{symbol}/history?start_date=2024-01-01&end_date=2024-01-31&limit=30
 ```
 
 #### 获取支持的交易所列表
+
 ```
 GET /api/v1/futures/exchanges
 ```
 
 #### 批量获取期货数据
+
 ```
 POST /api/v1/futures/batch
 Content-Type: application/json
@@ -71,11 +81,13 @@ Content-Type: application/json
 ```
 
 #### 获取外盘期货品种列表
+
 ```
 GET /api/v1/futures/foreign/symbols
 ```
 
 #### 获取外盘期货实时行情
+
 ```
 POST /api/v1/futures/foreign/realtime
 Content-Type: application/json
@@ -84,6 +96,7 @@ Content-Type: application/json
 ```
 
 支持的外盘期货品种：
+
 - **LME金属**: CAD(伦铜), AHD(伦铝), ZSD(伦锌), NID(伦镍), PBD(伦铅), SND(伦锡)
 - **COMEX贵金属**: GC(黄金), SI(白银)
 - **NYMEX能源**: CL(原油)
@@ -101,18 +114,34 @@ Content-Type: application/json
 ## 快速开始
 
 ### 安装依赖
+
 ```bash
 cargo build
 ```
 
 ### 运行服务
+
 ```bash
+# 普通运行
 cargo run
+
+# 开发模式（启用 Swagger UI）
+cargo run --features swagger
 ```
 
 服务将在 `http://127.0.0.1:8080` 启动
 
+### Swagger UI
+
+开发模式下（`--features swagger`），可以访问在线接口文档：
+
+- **Swagger UI**: <http://127.0.0.1:8080/swagger-ui/>
+- **OpenAPI JSON**: <http://127.0.0.1:8080/api-docs/openapi.json>
+
+> 注：Swagger UI 和 API 文档路径不需要 Token 认证
+
 ### 测试接口
+
 ```bash
 # 健康检查
 curl http://127.0.0.1:8080/api/v1/health
@@ -151,11 +180,15 @@ curl "http://127.0.0.1:8080/api/v1/futures/CU2405/history?limit=10"
 ```
 src/
 ├── main.rs              # 应用入口
+├── config.rs            # 配置加载
 ├── handlers/            # HTTP处理器
 │   ├── mod.rs
 │   ├── health.rs        # 健康检查
 │   ├── stock.rs         # 股票相关接口
-│   └── futures.rs       # 期货相关接口
+│   ├── futures.rs       # 期货相关接口
+│   └── openapi.rs       # OpenAPI 文档定义（swagger feature）
+├── middleware/          # 中间件
+│   └── api_key.rs       # API Key 认证
 ├── models/              # 数据模型
 │   ├── mod.rs
 │   ├── stock.rs         # 股票数据结构
@@ -163,13 +196,14 @@ src/
 │   └── response.rs      # API响应结构
 └── services/            # 业务逻辑
     ├── mod.rs
-    ├── stock_service.rs # 股票数据服务
-    └── futures_service.rs # 期货数据服务
+    ├── stock.rs         # 股票数据服务
+    └── futures/         # 期货数据服务
 ```
 
 ## 数据源说明
 
 ### 期货数据
+
 - **实时数据**: 新浪财经期货API
 - **外盘数据**: 新浪财经外盘期货API（LME、COMEX、NYMEX）
 - **数据更新**: 交易时间内实时更新
@@ -177,6 +211,7 @@ src/
 - **超时保护**: 30秒请求超时，10秒连接超时
 
 ### 股票数据
+
 - **当前版本**: 使用模拟数据
 - **扩展计划**: 可集成新浪、腾讯等股票API
 

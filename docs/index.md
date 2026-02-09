@@ -8,6 +8,19 @@
 - **认证方式**: Bearer Token
 - **请求头**: `Authorization: Bearer <token>`
 
+## Swagger UI（开发模式）
+
+开发模式下启动服务可访问在线接口文档：
+
+```bash
+cargo run --features swagger
+```
+
+- **Swagger UI**: <http://localhost:8080/swagger-ui/>
+- **OpenAPI JSON**: <http://localhost:8080/api-docs/openapi.json>
+
+> 注：Swagger UI 路径不需要 Token 认证
+
 ## 目录
 
 - [健康检查](health)
