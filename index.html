@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9016fb68.js";
+            window.path_to_searchindex_js = "searchindex-c26b7911.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-282ef506.js"></script>
@@ -185,6 +185,17 @@
 <li><strong>认证方式</strong>: Bearer Token</li>
 <li><strong>请求头</strong>: <code>Authorization: Bearer &lt;token&gt;</code></li>
 </ul>
+<h2 id="swagger-ui开发模式"><a class="header" href="#swagger-ui开发模式">Swagger UI（开发模式）</a></h2>
+<p>开发模式下启动服务可访问在线接口文档：</p>
+<pre><code class="language-bash">cargo run --features swagger
+</code></pre>
+<ul>
+<li><strong>Swagger UI</strong>: <a href="http://localhost:8080/swagger-ui/">http://localhost:8080/swagger-ui/</a></li>
+<li><strong>OpenAPI JSON</strong>: <a href="http://localhost:8080/api-docs/openapi.json">http://localhost:8080/api-docs/openapi.json</a></li>
+</ul>
+<blockquote>
+<p>注：Swagger UI 路径不需要 Token 认证</p>
+</blockquote>
 <h2 id="目录"><a class="header" href="#目录">目录</a></h2>
 <ul>
 <li><a href="health">健康检查</a></li>
