@@ -1,8 +1,9 @@
 //! 配置模块
 //!
-//! 支持从 JSON 文件加载系统配置
+//! 支持从 JSON 文件加载系统配置，并支持通过环境变量覆盖
 
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs;
 use std::path::Path;
 
@@ -57,11 +58,21 @@ pub struct AppConfig {
 }
 
 // 默认值函数
-fn default_host() -> String { "0.0.0.0".to_string() }
-fn default_port() -> u16 { 8080 }
-fn default_timeout() -> u64 { 30 }
-fn default_connect_timeout() -> u64 { 10 }
-fn default_log_level() -> String { "info".to_string() }
+fn default_host() -> String {
+    "0.0.0.0".to_string()
+}
+fn default_port() -> u16 {
+    8080
+}
+fn default_timeout() -> u64 {
+    30
+}
+fn default_connect_timeout() -> u64 {
+    10
+}
+fn default_log_level() -> String {
+    "info".to_string()
+}
 
 impl Default for ServerConfig {
     fn default() -> Self {
@@ -109,16 +120,90 @@ impl AppConfig {
         Ok(config)
     }
 
-    /// 加载配置，优先从文件，失败则使用默认值
+    /// 使用环境变量覆盖配置项
+    ///
+    /// 支持的环境变量：
+    /// - `API_KEY`: 覆盖 api.api_key
+    /// - `SERVER_HOST`: 覆盖 server.host
+    /// - `SERVER_PORT`: 覆盖 server.port
+    /// - `SERVER_WORKERS`: 覆盖 server.workers
+    /// - `LOG_LEVEL`: 覆盖 log.level
+    /// - `TIMEOUT_SECS`: 覆盖 api.timeout_secs
+    /// - `CONNECT_TIMEOUT_SECS`: 覆盖 api.connect_timeout_secs
+    fn apply_env_overrides(&mut self) {
+        // 仅在环境变量存在且非空时才覆盖配置
+        if let Ok(val) = env::var("API_KEY") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 API_KEY 覆盖配置");
+                self.api.api_key = val;
+            }
+        }
+        if let Ok(val) = env::var("SERVER_HOST") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 SERVER_HOST 覆盖配置");
+                self.server.host = val;
+            }
+        }
+        if let Ok(val) = env::var("SERVER_PORT") {
+            if !val.is_empty() {
+                if let Ok(port) = val.parse::<u16>() {
+                    log::info!("使用环境变量 SERVER_PORT 覆盖配置");
+                    self.server.port = port;
+                } else {
+                    log::warn!("环境变量 SERVER_PORT 值无效: {}", val);
+                }
+            }
+        }
+        if let Ok(val) = env::var("SERVER_WORKERS") {
+            if !val.is_empty() {
+                if let Ok(workers) = val.parse::<usize>() {
+                    log::info!("使用环境变量 SERVER_WORKERS 覆盖配置");
+                    self.server.workers = workers;
+                } else {
+                    log::warn!("环境变量 SERVER_WORKERS 值无效: {}", val);
+                }
+            }
+        }
+        if let Ok(val) = env::var("LOG_LEVEL") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 LOG_LEVEL 覆盖配置");
+                self.log.level = val;
+            }
+        }
+        if let Ok(val) = env::var("TIMEOUT_SECS") {
+            if !val.is_empty() {
+                if let Ok(secs) = val.parse::<u64>() {
+                    log::info!("使用环境变量 TIMEOUT_SECS 覆盖配置");
+                    self.api.timeout_secs = secs;
+                } else {
+                    log::warn!("环境变量 TIMEOUT_SECS 值无效: {}", val);
+                }
+            }
+        }
+        if let Ok(val) = env::var("CONNECT_TIMEOUT_SECS") {
+            if !val.is_empty() {
+                if let Ok(secs) = val.parse::<u64>() {
+                    log::info!("使用环境变量 CONNECT_TIMEOUT_SECS 覆盖配置");
+                    self.api.connect_timeout_secs = secs;
+                } else {
+                    log::warn!("环境变量 CONNECT_TIMEOUT_SECS 值无效: {}", val);
+                }
+            }
+        }
+    }
+
+    /// 加载配置，优先从文件，失败则使用默认值，最后应用环境变量覆盖
     pub fn load() -> Self {
         let config_paths = ["config.json", "config/config.json"];
-        
+
+        let mut config = None;
         for path in config_paths {
             if Path::new(path).exists() {
                 match Self::from_file(path) {
-                    Ok(config) => {
+                    Ok(c) => {
                         log::info!("从 {} 加载配置成功", path);
-                        return config;
+                        config = Some(c);
+                        break;
                     }
                     Err(e) => {
                         log::warn!("加载配置文件 {} 失败: {}", path, e);
@@ -126,9 +211,15 @@ impl AppConfig {
                 }
             }
         }
-        
-        log::info!("使用默认配置");
-        Self::default()
+
+        let mut config = config.unwrap_or_else(|| {
+            log::info!("使用默认配置");
+            Self::default()
+        });
+
+        // 环境变量覆盖（优先级最高）
+        config.apply_env_overrides();
+        config
     }
 
     /// 获取服务器绑定地址

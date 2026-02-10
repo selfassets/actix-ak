@@ -36,7 +36,15 @@ COPY config.json /app/config.json
 # 设置环境变量
 ENV RUST_LOG=info
 
+# 支持通过环境变量覆盖配置（优先级高于 config.json）
+# docker run -e API_KEY=your_key -e LOG_LEVEL=debug ...
+ENV API_KEY=""
+ENV SERVER_HOST="0.0.0.0"
+ENV SERVER_PORT=8080
+ENV LOG_LEVEL="info"
+
 EXPOSE 8080
 
 # 支持通过挂载覆盖配置文件: -v /path/to/config.json:/app/config.json
+# 也可以通过环境变量覆盖: -e API_KEY=your_key
 CMD ["./actix-ak"]
