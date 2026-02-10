@@ -102,19 +102,52 @@ impl FuturesService {
             if let Some(m) = re.find(content) {
                 let start_pos = m.end();
                 let remaining = &content[start_pos..];
+                println!("Found exchange {}: matching content starts", exchange_code);
 
-                for cap in item_re.captures_iter(remaining) {
-                    let symbol_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
-                    let mark = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+                // 通过括号计数查找当前数组的结束位置
+                let mut balance = 1;
+                let mut end_pos = 0;
 
-                    if !symbol_name.is_empty() && !mark.is_empty() && mark.ends_with("_qh") {
-                        symbols.push(FuturesSymbolMark {
-                            exchange: exchange_name.to_string(),
-                            symbol: symbol_name.to_string(),
-                            mark: mark.to_string(),
-                        });
+                for (i, c) in remaining.char_indices() {
+                    if c == '[' {
+                        balance += 1;
+                    } else if c == ']' {
+                        balance -= 1;
+                    }
+
+                    if balance == 0 {
+                        end_pos = i;
+                        break;
                     }
                 }
+
+                if end_pos > 0 {
+                    let array_content = &remaining[..end_pos];
+                    println!(
+                        "Exchange {} array content: {}",
+                        exchange_code, array_content
+                    );
+
+                    for cap in item_re.captures_iter(array_content) {
+                        let symbol_name = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+                        let mark = cap.get(2).map(|m| m.as_str()).unwrap_or("");
+
+                        if !symbol_name.is_empty() && !mark.is_empty() && mark.ends_with("_qh") {
+                            symbols.push(FuturesSymbolMark {
+                                exchange: exchange_name.to_string(),
+                                symbol: symbol_name.to_string(),
+                                mark: mark.to_string(),
+                            });
+                        }
+                    }
+                } else {
+                    println!(
+                        "Failed to find closing bracket for exchange {}",
+                        exchange_code
+                    );
+                }
+            } else {
+                println!("Exchange {} not found in content", exchange_code);
             }
         }
 
@@ -657,5 +690,61 @@ impl FuturesService {
             open_interest,
             updated_at: get_beijing_time(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_symbol_mark_js() {
+        let service = FuturesService::new();
+        // 模拟数据：czce 有 PTA，shfe 有 氧化铝 (AO)
+        // 注意：这里手动构造符合 parse_symbol_mark_js 预期的字符串结构
+        // 关键点在于 parse_symbol_mark_js 会寻找 "ARRFUTURESNODES = {" 和 "};" 之间的内容
+        // 然后寻找 czce: [...] 和 shfe: [...]
+        let js_text = r#"
+            var ARRFUTURESNODES = {
+                czce: [['PTA', 'PTA', 'pta_qh']],
+                shfe: [['氧化铝', 'AO', 'ao_qh']],
+            };
+        "#;
+
+        // 原始的 bug 会导致 czce 匹配到 pta_qh 后，因为没有检测 ']'，继续向后读，
+        // 可能会错误地包含后续的内容，或者如果 logic 是简单的 regex 查找，
+        // 关键是原来的 regex search 是在 remaining 中查找所有 matches。
+        // 原来的 logic:
+        // for cap in item_re.captures_iter(remaining) { ... }
+        // remaining 是从 "czce: [" 之后的所有内容，所以会包含 shfe 的内容。
+        // 现在的 logic 限制了 array_content 到 ']' 之前，所以不会包含 shfe 的内容。
+
+        let result = service.parse_symbol_mark_js(js_text).unwrap();
+
+        // 验证 czce 只有 PTA
+        let czce_symbols: Vec<&FuturesSymbolMark> = result
+            .iter()
+            .filter(|s| s.exchange == "郑州商品交易所")
+            .collect();
+        assert_eq!(
+            czce_symbols.len(),
+            1,
+            "Expected 1 symbol for CZCE, found {}",
+            czce_symbols.len()
+        );
+        assert_eq!(czce_symbols[0].symbol, "PTA");
+
+        // 验证 shfe 有 氧化铝
+        let shfe_symbols: Vec<&FuturesSymbolMark> = result
+            .iter()
+            .filter(|s| s.exchange == "上海期货交易所")
+            .collect();
+        assert_eq!(
+            shfe_symbols.len(),
+            1,
+            "Expected 1 symbol for SHFE, found {}",
+            shfe_symbols.len()
+        );
+        assert_eq!(shfe_symbols[0].symbol, "氧化铝");
     }
 }
