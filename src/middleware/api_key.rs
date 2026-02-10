@@ -73,6 +73,12 @@ where
                 return Ok(res.map_into_left_body());
             }
 
+            // API Key 为空时不启用认证，直接放行
+            if api_key.is_empty() {
+                let res = service.call(req).await?;
+                return Ok(res.map_into_left_body());
+            }
+
             // 验证 Bearer Token
             let provided_key = req
                 .headers()
