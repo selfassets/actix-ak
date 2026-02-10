@@ -58,6 +58,11 @@ GET {{baseUrl}}/futures/symbols/GFEX
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+### 获取品种所有合约实时数据（按品种名称，如沪铜、螺纹钢）
+GET {{baseUrl}}/futures/realtime/碳酸锂
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### ============================================================
 ### 期货 - 实时行情
 ### ============================================================
@@ -84,10 +89,6 @@ Content-Type: application/json
 
 ["CU2602", "AL2602", "RB2605", "AU2602"]
 
-### 获取品种所有合约实时数据（按品种名称，如沪铜、螺纹钢）
-GET {{baseUrl}}/futures/realtime/沪铜
-Authorization: Bearer {{token}}
-Content-Type: application/json
 
 ### ============================================================
 ### 期货 - K线历史数据
@@ -139,6 +140,11 @@ Content-Type: application/json
 
 ### 获取期货列表 - 中金所
 GET {{baseUrl}}/futures?exchange=CFFEX&limit=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取期货列表 - 广州期货交易所
+GET {{baseUrl}}/futures?exchange=GFEX&limit=10
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
