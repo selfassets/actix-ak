@@ -28,11 +28,6 @@ GET {{baseUrl}}/futures/symbols
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-### 获取上期所品种列表
-GET {{baseUrl}}/futures/symbols/SHFE
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
 ### 获取大商所品种列表
 GET {{baseUrl}}/futures/symbols/DCE
 Authorization: Bearer {{token}}
@@ -43,13 +38,23 @@ GET {{baseUrl}}/futures/symbols/CZCE
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-### 获取广州期货交易所品种列表
-GET {{baseUrl}}/futures/symbols/GFEX
+### 获取上期所品种列表
+GET {{baseUrl}}/futures/symbols/SHFE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取上海国际能源交易中心品种列表
+GET {{baseUrl}}/futures/symbols/INE
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 ### 获取中金所品种列表
 GET {{baseUrl}}/futures/symbols/CFFEX
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取广州期货交易所品种列表
+GET {{baseUrl}}/futures/symbols/GFEX
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
