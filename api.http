@@ -43,6 +43,11 @@ GET {{baseUrl}}/futures/symbols/CZCE
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+### 获取广州期货交易所品种列表
+GET {{baseUrl}}/futures/symbols/GFEX
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### 获取中金所品种列表
 GET {{baseUrl}}/futures/symbols/CFFEX
 Authorization: Bearer {{token}}
