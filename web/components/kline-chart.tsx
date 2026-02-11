@@ -20,9 +20,14 @@ import { getFuturesHistory, FuturesHistoryData } from "@/lib/api";
 interface KlineChartProps {
   symbol: string;
   name?: string;
+  height?: number;
 }
 
-export default function KlineChart({ symbol, name }: KlineChartProps) {
+export default function KlineChart({
+  symbol,
+  name,
+  height = 400,
+}: KlineChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +72,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
 
         const chart = createChart(chartContainerRef.current, {
           width: chartContainerRef.current.clientWidth,
-          height: 400,
+          height: height,
           layout: {
             background: { type: ColorType.Solid, color: "transparent" },
             textColor: "#9ca3af",
@@ -173,7 +178,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
         chartRef.current = null;
       }
     };
-  }, [symbol, limit]);
+  }, [symbol, limit, height]);
 
   return (
     <Card>
@@ -198,7 +203,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="relative h-[400px]">
+      <CardContent className="relative" style={{ height: height }}>
         {loading && (
           <Skeleton className="absolute inset-0 w-full h-full rounded-lg z-10" />
         )}

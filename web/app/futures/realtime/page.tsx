@@ -300,12 +300,10 @@ function RealtimeContent() {
                   size="sm"
                   className="w-full gap-1.5"
                   onClick={() =>
-                    router.push(
-                      `/futures/kline?symbol=${r.symbol}&name=${encodeURIComponent(r.name)}`,
-                    )
+                    router.push(`/futures/detail?symbol=${r.symbol}`)
                   }
                 >
-                  📈 查看K线
+                  📈 查看详情
                 </Button>
               </div>
             ))}

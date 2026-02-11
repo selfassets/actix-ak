@@ -120,7 +120,7 @@ export default function SymbolsPage() {
                     >
                       <TableCell className="font-mono font-medium">
                         <Link
-                          href={`/futures/realtime?symbol=${s.symbol}`}
+                          href={`/futures/detail?symbol=${s.symbol}`}
                           className="text-primary hover:underline"
                         >
                           {s.symbol}

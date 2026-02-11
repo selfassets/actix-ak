@@ -208,3 +208,25 @@ export const getStockInfo = (symbol: string) =>
 
 export const getStockHistory = (symbol: string, limit = 30) =>
   fetchApi<StockHistoryData[]>(`/stocks/${symbol}/history?limit=${limit}`);
+
+// ==================== 期货 - 合约详情 ====================
+
+export interface FuturesContractDetail {
+  symbol: string;
+  name: string;
+  exchange: string;
+  trading_unit: string;
+  quote_unit: string;
+  min_price_change: string;
+  price_limit: string;
+  contract_months: string;
+  trading_hours: string;
+  last_trading_day: string;
+  last_delivery_day: string;
+  delivery_grade: string;
+  margin: string;
+  delivery_method: string;
+}
+
+export const getContractDetail = (symbol: string) =>
+  fetchApi<FuturesContractDetail>(`/futures/${symbol}/detail`);

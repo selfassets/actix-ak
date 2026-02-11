@@ -14,20 +14,26 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import {
   LayoutDashboard,
-  TrendingUp,
+  Globe,
+  ChevronRight,
+  Menu,
   Landmark,
   List,
   Zap,
   Target,
   Coins,
-  Globe,
-  TrendingDown,
-  ChevronRight,
-  Menu,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  children?: NavItem[];
+}
+
+const navItems: NavItem[] = [
   {
     title: "首页",
     href: "/",
