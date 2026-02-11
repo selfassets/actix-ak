@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>健康检查 - Actix-AK API Documentation</title>
+        <title>注册中心 - Actix-AK API Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -177,19 +177,182 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="健康检查"><a class="header" href="#健康检查">健康检查</a></h1>
-<p>检测服务是否正常运行。</p>
-<h2 id="get-health"><a class="header" href="#get-health">GET /health</a></h2>
-<p>健康检查接口，无需认证。</p>
-<h3 id="请求示例"><a class="header" href="#请求示例">请求示例</a></h3>
-<pre><code class="language-bash">curl -X GET "https://byteappua-actix-ak.zeabur.app/api/v1/health"
+                        <h1 id="注册中心"><a class="header" href="#注册中心">注册中心</a></h1>
+<p>独立运行的服务注册中心，接收服务注册和心跳，管理服务实例生命周期。</p>
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<p>注册中心作为独立服务（<code>registry-server</code>）运行，actix-ak 实例通过内置客户端向其注册并定时发送心跳。</p>
+<pre><code>registry-server (:8081)          actix-ak (:8080)
+┌──────────────────────┐         ┌──────────────────────┐
+│  ServiceRegistry     │◄────────│  RegistryClient      │
+│  ├ 注册/注销         │ register│  ├ 启动时注册         │
+│  ├ 心跳接收          │◄────────│  ├ 定时心跳（10s）    │
+│  ├ 过期清理（30s）   │heartbeat│  └ 失败自动重连       │
+│  └ Web 仪表板        │         └──────────────────────┘
+└──────────────────────┘
 </code></pre>
-<h3 id="响应示例"><a class="header" href="#响应示例">响应示例</a></h3>
+<h2 id="快速开始"><a class="header" href="#快速开始">快速开始</a></h2>
+<blockquote>
+<p>⚠️ <strong>启动顺序</strong>：必须先启动注册中心，再启动 actix-ak。actix-ak 启动时会立即尝试注册，如果注册中心未就绪，客户端会每 5 秒重试直至成功。</p>
+</blockquote>
+<h3 id="第一步启动注册中心"><a class="header" href="#第一步启动注册中心">第一步：启动注册中心</a></h3>
+<pre><code class="language-bash">cargo run -p registry-server
+</code></pre>
+<p>默认监听 <code>http://localhost:8081</code>，浏览器访问可查看仪表板。</p>
+<h3 id="第二步启动-actix-ak"><a class="header" href="#第二步启动-actix-ak">第二步：启动 actix-ak</a></h3>
+<p>方式一：修改 <code>config.json</code>，开启注册并设置注册中心地址：</p>
+<pre><code class="language-json">{
+  "registry": {
+    "enabled": true,
+    "registry_url": "http://localhost:8081",
+    "service_name": "actix-ak",
+    "heartbeat_interval_secs": 10
+  }
+}
+</code></pre>
+<p>方式二：通过命令行环境变量直接设置（无需修改配置文件）：</p>
+<pre><code class="language-bash">REGISTRY_ENABLED=true REGISTRY_URL=http://localhost:8081 cargo run -p actix-ak
+</code></pre>
+<p><code>enabled</code> 为 <code>true</code> 且 <code>registry_url</code> 非空时，启动后将自动注册并每 10 秒发送心跳。</p>
+<h2 id="配置"><a class="header" href="#配置">配置</a></h2>
+<h3 id="registry-serverconfigjson"><a class="header" href="#registry-serverconfigjson">registry-server/config.json</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>字段</th><th>默认值</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>server.host</code></td><td><code>0.0.0.0</code></td><td>监听地址</td></tr>
+<tr><td><code>server.port</code></td><td><code>8081</code></td><td>监听端口</td></tr>
+<tr><td><code>registry.heartbeat_timeout_secs</code></td><td><code>30</code></td><td>心跳超时阈值（秒），超时实例将被清理</td></tr>
+<tr><td><code>log.level</code></td><td><code>info</code></td><td>日志级别</td></tr>
+</tbody>
+</table>
+</div>
+<p>支持环境变量覆盖：<code>SERVER_HOST</code>、<code>SERVER_PORT</code>、<code>HEARTBEAT_TIMEOUT_SECS</code>、<code>LOG_LEVEL</code></p>
+<h3 id="actix-ak-客户端配置"><a class="header" href="#actix-ak-客户端配置">actix-ak 客户端配置</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>字段</th><th>默认值</th><th>说明</th></tr>
+</thead>
+<tbody>
+<tr><td><code>registry.enabled</code></td><td><code>false</code></td><td>是否开启注册到注册中心</td></tr>
+<tr><td><code>registry.registry_url</code></td><td><code>""</code></td><td>注册中心地址</td></tr>
+<tr><td><code>registry.service_name</code></td><td><code>actix-ak</code></td><td>服务名称</td></tr>
+<tr><td><code>registry.heartbeat_interval_secs</code></td><td><code>10</code></td><td>心跳发送间隔（秒）</td></tr>
+</tbody>
+</table>
+</div>
+<p>支持环境变量覆盖：<code>REGISTRY_ENABLED</code>、<code>REGISTRY_URL</code>、<code>SERVICE_NAME</code></p>
+<hr>
+<h2 id="api-接口"><a class="header" href="#api-接口">API 接口</a></h2>
+<p>Base URL: <code>http://localhost:8081/api/v1/registry</code></p>
+<h3 id="post-register"><a class="header" href="#post-register">POST /register</a></h3>
+<p>注册服务实例。</p>
+<p><strong>请求体：</strong></p>
+<pre><code class="language-json">{
+  "service_name": "my-service",
+  "host": "127.0.0.1",
+  "port": 9090,
+  "metadata": {}
+}
+</code></pre>
+<p><strong>响应：</strong></p>
 <pre><code class="language-json">{
   "success": true,
-  "data": "服务运行正常",
-  "error": null
+  "data": {
+    "instance_id": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "message": "Success",
+  "timestamp": "2026-02-11T22:00:00+08:00"
 }
+</code></pre>
+<h3 id="post-heartbeat"><a class="header" href="#post-heartbeat">POST /heartbeat</a></h3>
+<p>发送心跳。</p>
+<p><strong>请求体：</strong></p>
+<pre><code class="language-json">{
+  "instance_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+</code></pre>
+<p><strong>响应：</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": "心跳接收成功",
+  "message": "Success",
+  "timestamp": "2026-02-11T22:00:10+08:00"
+}
+</code></pre>
+<h3 id="get-instances"><a class="header" href="#get-instances">GET /instances</a></h3>
+<p>获取所有已注册服务实例。</p>
+<p><strong>请求示例：</strong></p>
+<pre><code class="language-bash">curl http://localhost:8081/api/v1/registry/instances
+</code></pre>
+<p><strong>响应：</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "instance_id": "550e8400-e29b-41d4-a716-446655440000",
+      "service_name": "actix-ak",
+      "host": "0.0.0.0",
+      "port": 8080,
+      "status": "Up",
+      "last_heartbeat": "2026-02-11T14:00:10Z",
+      "registered_at": "2026-02-11T14:00:00Z",
+      "metadata": {}
+    }
+  ],
+  "message": "Success",
+  "timestamp": "2026-02-11T22:00:15+08:00"
+}
+</code></pre>
+<h3 instance_id="" id="delete-deregister"><a class="header" href="#delete-deregister">DELETE /deregister/</a></h3>
+<p>注销服务实例。</p>
+<p><strong>请求示例：</strong></p>
+<pre><code class="language-bash">curl -X DELETE http://localhost:8081/api/v1/registry/deregister/550e8400-e29b-41d4-a716-446655440000
+</code></pre>
+<hr>
+<h2 id="仪表板"><a class="header" href="#仪表板">仪表板</a></h2>
+<p>浏览器访问 <code>http://localhost:8081/</code> 可查看 Web 仪表板，包含：</p>
+<ul>
+<li><strong>统计卡片</strong>：已注册服务数、在线数、离线数、服务类型数</li>
+<li><strong>实例列表</strong>：服务名称、地址、状态、最近心跳时间、注册时间</li>
+<li>每 5 秒自动刷新</li>
+</ul>
+<hr>
+<h2 id="技术说明"><a class="header" href="#技术说明">技术说明</a></h2>
+<h3 id="项目结构"><a class="header" href="#项目结构">项目结构</a></h3>
+<p>项目采用 <strong>Cargo workspace</strong> 管理，包含两个 crate：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Crate</th><th>说明</th><th>默认端口</th></tr>
+</thead>
+<tbody>
+<tr><td><code>actix-ak</code></td><td>金融数据 API 服务 + 注册客户端</td><td>8080</td></tr>
+<tr><td><code>registry-server</code></td><td>独立注册中心服务</td><td>8081</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="http-客户端"><a class="header" href="#http-客户端">HTTP 客户端</a></h3>
+<p>注册客户端使用 <code>awc</code>（actix-web-client），与 actix-web 运行时原生兼容。</p>
+<h3 id="配置加载"><a class="header" href="#配置加载">配置加载</a></h3>
+<p>两个服务支持从 workspace 根目录或各自子目录运行，配置文件自动识别：</p>
+<ul>
+<li><strong>registry-server</strong>：优先加载 <code>registry-server/config.json</code>，回退到当前目录 <code>config.json</code></li>
+<li><strong>actix-ak</strong>：优先加载当前目录 <code>config.json</code>，回退到 <code>../config.json</code></li>
+</ul>
+<p>环境变量始终优先于配置文件。</p>
+<h3 id="docker-部署"><a class="header" href="#docker-部署">Docker 部署</a></h3>
+<p>一键启动全部服务（registry-server 会先启动并健康检查通过后，actix-ak 自动注册）：</p>
+<pre><code class="language-bash">docker-compose up -d
+</code></pre>
+<p>单独构建：</p>
+<pre><code class="language-bash"># actix-ak
+docker build -t actix-ak .
+
+# registry-server
+docker build -t registry-server -f registry-server/Dockerfile .
 </code></pre>
 <hr>
 <p><a href="index.html">返回首页</a></p>
@@ -198,11 +361,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="stocks.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="futures.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="web.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -212,11 +375,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="stocks.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="futures.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="web.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
