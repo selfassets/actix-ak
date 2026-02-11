@@ -126,6 +126,7 @@ impl AppConfig {
     /// - `API_KEY`: 覆盖 api.api_key
     /// - `SERVER_HOST`: 覆盖 server.host
     /// - `SERVER_PORT`: 覆盖 server.port
+    /// - `PORT`: 覆盖 server.port (优先级高于 SERVER_PORT)
     /// - `SERVER_WORKERS`: 覆盖 server.workers
     /// - `LOG_LEVEL`: 覆盖 log.level
     /// - `TIMEOUT_SECS`: 覆盖 api.timeout_secs
@@ -151,6 +152,17 @@ impl AppConfig {
                     self.server.port = port;
                 } else {
                     log::warn!("环境变量 SERVER_PORT 值无效: {}", val);
+                }
+            }
+        }
+        // 优先使用 PORT 环境变量（PaaS 平台标准）
+        if let Ok(val) = env::var("PORT") {
+            if !val.is_empty() {
+                if let Ok(port) = val.parse::<u16>() {
+                    log::info!("使用环境变量 PORT 覆盖配置");
+                    self.server.port = port;
+                } else {
+                    log::warn!("环境变量 PORT 值无效: {}", val);
                 }
             }
         }

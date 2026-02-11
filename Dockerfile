@@ -40,7 +40,7 @@ ENV RUST_LOG=info
 # docker run -e API_KEY=your_key -e LOG_LEVEL=debug ...
 ENV API_KEY=""
 ENV SERVER_HOST="0.0.0.0"
-ENV SERVER_PORT=8080
+ENV PORT=8080
 ENV LOG_LEVEL="info"
 
 EXPOSE 8080
