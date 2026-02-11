@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useThemeColor } from "@/components/theme-color-provider";
 import {
   LayoutDashboard,
   Landmark,
@@ -11,6 +12,7 @@ import {
   ChevronRight,
   Sun,
   Laptop,
+  Palette,
 } from "lucide-react";
 import {
   Sidebar,
@@ -70,6 +72,7 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { setTheme } = useTheme();
+  const { setThemeColor, themeColor } = useThemeColor();
 
   return (
     <Sidebar collapsible="icon">
@@ -150,6 +153,58 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <Palette className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">色彩搭配</span>
+                    <span className="truncate text-xs">
+                      {themeColor === "default" ? "默认" : themeColor}
+                    </span>
+                  </div>
+                  <ChevronRight className="ml-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side="bottom"
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenuItem onClick={() => setThemeColor("default")}>
+                  <span>默认</span>
+                  {themeColor === "default" && (
+                    <ChevronRight className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setThemeColor("blue")}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full bg-blue-500" />
+                    <span>Blue</span>
+                  </div>
+                  {themeColor === "blue" && (
+                    <ChevronRight className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setThemeColor("green")}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full bg-green-500" />
+                    <span>Green</span>
+                  </div>
+                  {themeColor === "green" && (
+                    <ChevronRight className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
