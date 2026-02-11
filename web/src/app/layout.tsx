@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AkShare 数据展示平台",
+  title: "Ak 数据展示平台",
   description: "期货与股票实时数据展示 - Powered by Actix + AkShare",
 };
 
