@@ -30,6 +30,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
   const [limit, setLimit] = useState(60);
 
   useEffect(() => {
+    let ignore = false;
     if (!chartContainerRef.current || !symbol) return;
 
     // Cleanup previous chart
@@ -43,6 +44,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
 
     getFuturesHistory(symbol, limit)
       .then((res) => {
+        if (ignore) return;
         if (!res.success || !res.data || res.data.length === 0) {
           setError(res.message || "暂无K线数据");
           setLoading(false);
@@ -147,11 +149,13 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
         };
       })
       .catch((e) => {
+        if (ignore) return;
         setError(e instanceof Error ? e.message : "K线数据加载失败");
         setLoading(false);
       });
 
     return () => {
+      ignore = true;
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
