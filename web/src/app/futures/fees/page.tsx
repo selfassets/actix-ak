@@ -63,6 +63,43 @@ export default function FeesPage() {
     fetchCommInfo(code);
   };
 
+  const columnNameMap: Record<string, string> = {
+    // FuturesFeesInfo
+    exchange: "交易所",
+    contract_code: "合约代码",
+    contract_name: "合约名称",
+    product_code: "品种代码",
+    product_name: "品种名称",
+    contract_size: "合约乘数",
+    price_tick: "最小跳动",
+    open_fee_rate: "开仓费率",
+    open_fee: "开仓费用/手",
+    close_fee_rate: "平仓费率",
+    close_fee: "平仓费用/手",
+    close_today_fee_rate: "平今费率",
+    close_today_fee: "平今费用/手",
+    long_margin_rate: "做多保证金率",
+    short_margin_rate: "做空保证金率",
+    updated_at: "更新时间",
+    // FuturesCommInfo
+    current_price: "现价",
+    limit_up: "涨停板",
+    limit_down: "跌停板",
+    margin_buy: "保证金-买开(%)",
+    margin_sell: "保证金-卖开(%)",
+    margin_per_lot: "保证金-每手(元)",
+    fee_open_ratio: "开仓-万分之",
+    fee_open_yuan: "开仓-元",
+    fee_close_yesterday_ratio: "平昨-万分之",
+    fee_close_yesterday_yuan: "平昨-元",
+    fee_close_today_ratio: "平今-万分之",
+    fee_close_today_yuan: "平今-元",
+    profit_per_tick: "每跳毛利",
+    fee_total: "手续费(开+平)",
+    net_profit_per_tick: "每跳净利",
+    remark: "备注",
+  };
+
   const renderTable = (
     data: Record<string, unknown>[],
     loading: boolean,
@@ -92,7 +129,7 @@ export default function FeesPage() {
             <TableRow>
               {columns.map((col) => (
                 <TableHead key={col} className="whitespace-nowrap">
-                  {col}
+                  {columnNameMap[col] || col}
                 </TableHead>
               ))}
             </TableRow>
