@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ function PriceCard({ data }: { data: FuturesInfo }) {
   const isUp = data.change >= 0;
   return (
     <Card
-      className={`border ${isUp ? "border-green-500/30" : "border-red-500/30"}`}
+      className={`border ${isUp ? "border-red-500/30" : "border-green-500/30"}`}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -48,7 +48,7 @@ function PriceCard({ data }: { data: FuturesInfo }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="text-2xl font-bold font-mono">
-          <span className={isUp ? "text-green-400" : "text-red-400"}>
+          <span className={isUp ? "text-red-400" : "text-green-400"}>
             {data.current_price?.toFixed(2)}
           </span>
         </div>
@@ -56,7 +56,7 @@ function PriceCard({ data }: { data: FuturesInfo }) {
           <div className="flex justify-between">
             <span className="text-muted-foreground">涨跌额</span>
             <span
-              className={`font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+              className={`font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
             >
               {isUp ? "+" : ""}
               {data.change?.toFixed(2)}
@@ -76,13 +76,13 @@ function PriceCard({ data }: { data: FuturesInfo }) {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">最高</span>
-            <span className="font-mono text-green-400">
+            <span className="font-mono text-red-400">
               {data.high?.toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">最低</span>
-            <span className="font-mono text-red-400">
+            <span className="font-mono text-green-400">
               {data.low?.toFixed(2)}
             </span>
           </div>
@@ -97,6 +97,7 @@ function PriceCard({ data }: { data: FuturesInfo }) {
 
 function RealtimeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const urlSymbol = searchParams.get("symbol") || "";
 
   const [symbol, setSymbol] = useState(urlSymbol);
@@ -162,11 +163,23 @@ function RealtimeContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">实时行情</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          查询期货合约的实时行情数据
-        </p>
+      <div className="flex items-center gap-3">
+        {urlSymbol && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-1"
+          >
+            ← 返回
+          </Button>
+        )}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">实时行情</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            查询期货合约的实时行情数据
+          </p>
+        </div>
       </div>
 
       {/* Search */}
@@ -268,18 +281,18 @@ function RealtimeContent() {
                             </TableCell>
                             <TableCell>{r.name}</TableCell>
                             <TableCell
-                              className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                              className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                             >
                               {r.current_price?.toFixed(2)}
                             </TableCell>
                             <TableCell
-                              className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                              className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                             >
                               {isUp ? "+" : ""}
                               {r.change?.toFixed(2)}
                             </TableCell>
                             <TableCell
-                              className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                              className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                             >
                               {isUp ? "+" : ""}
                               {r.change_percent?.toFixed(2)}%

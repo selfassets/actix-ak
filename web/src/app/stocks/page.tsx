@@ -109,12 +109,12 @@ export default function StocksPage() {
                         </TableCell>
                         <TableCell className="font-medium">{s.name}</TableCell>
                         <TableCell
-                          className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                          className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                         >
                           {s.current_price?.toFixed(2)}
                         </TableCell>
                         <TableCell
-                          className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                          className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                         >
                           {isUp ? "+" : ""}
                           {s.change?.toFixed(2)}

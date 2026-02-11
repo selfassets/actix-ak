@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -139,9 +140,17 @@ export default function ExchangesPage() {
                   </TableHeader>
                   <TableBody>
                     {symbols.map((s, i) => (
-                      <TableRow key={i}>
+                      <TableRow
+                        key={i}
+                        className="cursor-pointer hover:bg-muted/50"
+                      >
                         <TableCell className="font-mono font-medium">
-                          {s.symbol}
+                          <Link
+                            href={`/futures/realtime?symbol=${s.symbol}`}
+                            className="text-primary hover:underline"
+                          >
+                            {s.symbol}
+                          </Link>
                         </TableCell>
                         <TableCell>{s.name}</TableCell>
                         <TableCell>

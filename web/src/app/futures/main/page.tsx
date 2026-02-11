@@ -133,7 +133,7 @@ export default function MainContractsPage() {
                               </TableCell>
                               <TableCell>{c.name}</TableCell>
                               <TableCell
-                                className={`text-right font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                                className={`text-right font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
                               >
                                 {c.current_price?.toFixed(2)}
                               </TableCell>

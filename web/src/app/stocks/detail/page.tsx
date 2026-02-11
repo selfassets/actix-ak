@@ -113,7 +113,7 @@ function StockDetailContent() {
 
       {/* Stock Header Card */}
       <Card
-        className={`border ${isUp ? "border-green-500/30" : "border-red-500/30"}`}
+        className={`border ${isUp ? "border-red-500/30" : "border-green-500/30"}`}
       >
         <CardContent className="py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -123,7 +123,7 @@ function StockDetailContent() {
             </div>
             <div className="text-right">
               <p
-                className={`text-4xl font-bold font-mono ${isUp ? "text-green-400" : "text-red-400"}`}
+                className={`text-4xl font-bold font-mono ${isUp ? "text-red-400" : "text-green-400"}`}
               >
                 {stock.current_price?.toFixed(2)}
               </p>
@@ -156,12 +156,12 @@ function StockDetailContent() {
           {
             label: "最高",
             value: stock.high?.toFixed(2),
-            color: "text-green-400",
+            color: "text-red-400",
           },
           {
             label: "最低",
             value: stock.low?.toFixed(2),
-            color: "text-red-400",
+            color: "text-green-400",
           },
           { label: "成交量", value: stock.volume?.toLocaleString() },
           { label: "成交额", value: stock.amount?.toLocaleString() },
@@ -224,10 +224,10 @@ function StockDetailContent() {
                       <TableCell className="text-right font-mono">
                         {h.open?.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-green-400">
+                      <TableCell className="text-right font-mono text-red-400">
                         {h.high?.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-red-400">
+                      <TableCell className="text-right font-mono text-green-400">
                         {h.low?.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium">
