@@ -11,6 +11,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 const navItems = [
   {
@@ -23,6 +24,7 @@ const navItems = [
     icon: "📈",
     children: [
       { title: "交易所 & 品种", href: "/futures/exchanges", icon: "🏛️" },
+      { title: "品种列表", href: "/futures/symbols", icon: "📋" },
       { title: "实时行情", href: "/futures/realtime", icon: "⚡" },
       { title: "主力合约", href: "/futures/main", icon: "🎯" },
       { title: "交易费用", href: "/futures/fees", icon: "💰" },
@@ -123,7 +125,8 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </nav>
       <Separator />
-      <div className="p-4">
+      <div className="p-3 space-y-3">
+        <ThemeSwitcher />
         <div className="text-xs text-muted-foreground text-center">
           Powered by Actix + AkShare
         </div>

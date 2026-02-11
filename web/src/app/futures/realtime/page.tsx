@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,11 +90,28 @@ function PriceCard({ data }: { data: FuturesInfo }) {
   );
 }
 
-export default function RealtimePage() {
-  const [symbol, setSymbol] = useState("");
+function RealtimeContent() {
+  const searchParams = useSearchParams();
+  const urlSymbol = searchParams.get("symbol") || "";
+
+  const [symbol, setSymbol] = useState(urlSymbol);
   const [results, setResults] = useState<FuturesInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (urlSymbol) {
+      setSymbol(urlSymbol);
+      setLoading(true);
+      getFuturesInfo(urlSymbol)
+        .then((res) => {
+          if (res.success && res.data) setResults([res.data]);
+          else setError(res.message);
+        })
+        .catch((e) => setError(e instanceof Error ? e.message : "请求失败"))
+        .finally(() => setLoading(false));
+    }
+  }, [urlSymbol]);
 
   const handleSearch = async () => {
     if (!symbol.trim()) return;
@@ -271,5 +289,20 @@ export default function RealtimePage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function RealtimePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+      }
+    >
+      <RealtimeContent />
+    </Suspense>
   );
 }
