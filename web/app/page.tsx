@@ -70,7 +70,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -110,7 +110,7 @@ export default function HomePage() {
       </Card>
 
       {/* Module Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {modules.map((mod) => (
           <Link key={mod.href} href={mod.href}>
             <Card
@@ -135,7 +135,7 @@ export default function HomePage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "交易所", value: "6", icon: "🏛️" },
           { label: "期货品种", value: "70+", icon: "📊" },

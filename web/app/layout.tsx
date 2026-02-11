@@ -33,7 +33,7 @@ export default function RootLayout({
           <div className="flex min-h-screen">
             <AppSidebar />
             <main className="flex-1 md:ml-64">
-              <div className="p-6 md:p-8 max-w-7xl mx-auto">{children}</div>
+              <div className="p-4 md:p-6 max-w-7xl mx-auto">{children}</div>
             </main>
           </div>
         </ThemeProvider>
