@@ -9,6 +9,7 @@ mod middleware; // 中间件
 mod models; // 数据模型定义
 mod services; // 业务逻辑服务
 
+use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
 use env_logger::Env;
 
@@ -47,9 +48,16 @@ async fn main() -> std::io::Result<()> {
 
     // 创建并启动 HTTP 服务器
     let mut server = HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
+
         let app = App::new()
-            .wrap(Logger::default())
             .wrap(ApiKeyMiddleware::new(api_key.clone()))
+            .wrap(Logger::default())
+            .wrap(cors)
             .configure(handlers::config);
 
         // 条件挂载 Swagger UI（仅在启用 swagger feature 时）
