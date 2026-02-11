@@ -21,6 +21,7 @@ import {
   getFuturesRealtime,
   FuturesInfo,
 } from "@/lib/api";
+import KlineChart from "@/components/kline-chart";
 
 const quickSymbols = [
   "CU2602",
@@ -102,8 +103,12 @@ function RealtimeContent() {
 
   const [symbol, setSymbol] = useState(urlSymbol);
   const [results, setResults] = useState<FuturesInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!!urlSymbol);
   const [error, setError] = useState<string | null>(null);
+  const [selectedChart, setSelectedChart] = useState<{
+    symbol: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     if (urlSymbol) {
@@ -247,9 +252,34 @@ function RealtimeContent() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {results.map((r) => (
-              <PriceCard key={r.symbol} data={r} />
+              <div key={r.symbol} className="space-y-2">
+                <PriceCard data={r} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5"
+                  onClick={() =>
+                    setSelectedChart(
+                      selectedChart?.symbol === r.symbol
+                        ? null
+                        : { symbol: r.symbol, name: r.name },
+                    )
+                  }
+                >
+                  📈{" "}
+                  {selectedChart?.symbol === r.symbol ? "收起K线" : "查看K线"}
+                </Button>
+              </div>
             ))}
           </div>
+
+          {/* K-Line Chart */}
+          {selectedChart && (
+            <KlineChart
+              symbol={selectedChart.symbol}
+              name={selectedChart.name}
+            />
+          )}
 
           {/* Results - Table */}
           {results.length > 1 && (

@@ -33,18 +33,6 @@ export default function FeesPage() {
   const [commError, setCommError] = useState<string | null>(null);
   const [activeExchange, setActiveExchange] = useState("");
 
-  useEffect(() => {
-    getFuturesFees()
-      .then((res) => {
-        if (res.success && res.data) setFees(res.data);
-        else setFeesError(res.message);
-      })
-      .catch((e) => setFeesError(e.message))
-      .finally(() => setFeesLoading(false));
-
-    fetchCommInfo("");
-  }, []);
-
   const fetchCommInfo = async (exchange: string) => {
     setCommLoading(true);
     setCommError(null);
@@ -57,6 +45,18 @@ export default function FeesPage() {
     }
     setCommLoading(false);
   };
+
+  useEffect(() => {
+    getFuturesFees()
+      .then((res) => {
+        if (res.success && res.data) setFees(res.data);
+        else setFeesError(res.message);
+      })
+      .catch((e) => setFeesError(e.message))
+      .finally(() => setFeesLoading(false));
+
+    fetchCommInfo("");
+  }, []);
 
   const handleExchangeChange = (code: string) => {
     setActiveExchange(code);
