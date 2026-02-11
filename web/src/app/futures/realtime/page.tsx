@@ -15,7 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getFuturesInfo, getFuturesBatch, FuturesInfo } from "@/lib/api";
+import {
+  getFuturesInfo,
+  getFuturesBatch,
+  getFuturesRealtime,
+  FuturesInfo,
+} from "@/lib/api";
 
 const quickSymbols = [
   "CU2602",
@@ -103,10 +108,18 @@ function RealtimeContent() {
     if (urlSymbol) {
       setSymbol(urlSymbol);
       setLoading(true);
-      getFuturesInfo(urlSymbol)
+      // 尝试用品种简码查询所有合约，若失败则用精确合约代码查询
+      getFuturesRealtime(urlSymbol)
         .then((res) => {
-          if (res.success && res.data) setResults([res.data]);
-          else setError(res.message);
+          if (res.success && res.data && res.data.length > 0) {
+            setResults(res.data);
+          } else {
+            // 回退到精确合约查询
+            return getFuturesInfo(urlSymbol).then((r) => {
+              if (r.success && r.data) setResults([r.data]);
+              else setError(r.message);
+            });
+          }
         })
         .catch((e) => setError(e instanceof Error ? e.message : "请求失败"))
         .finally(() => setLoading(false));
