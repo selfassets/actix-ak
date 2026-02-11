@@ -138,11 +138,12 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
           }
         };
 
-        window.addEventListener("resize", handleResize);
+        const resizeObserver = new ResizeObserver(() => handleResize());
+        resizeObserver.observe(chartContainerRef.current);
         setLoading(false);
 
         return () => {
-          window.removeEventListener("resize", handleResize);
+          resizeObserver.disconnect();
         };
       })
       .catch((e) => {
@@ -190,7 +191,8 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
         )}
         <div
           ref={chartContainerRef}
-          className={loading || error ? "hidden" : ""}
+          className="w-full"
+          style={{ display: loading || error ? "none" : "block" }}
         />
       </CardContent>
     </Card>
