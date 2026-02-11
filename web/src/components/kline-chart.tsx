@@ -182,18 +182,16 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        {loading && <Skeleton className="h-[400px] w-full rounded-lg" />}
+      <CardContent className="relative h-[400px]">
+        {loading && (
+          <Skeleton className="absolute inset-0 w-full h-full rounded-lg z-10" />
+        )}
         {error && (
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground z-10 bg-background/80 backdrop-blur-sm">
             {error}
           </div>
         )}
-        <div
-          ref={chartContainerRef}
-          className="w-full"
-          style={{ display: loading || error ? "none" : "block" }}
-        />
+        <div ref={chartContainerRef} className="w-full h-full" />
       </CardContent>
     </Card>
   );
