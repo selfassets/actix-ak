@@ -33,23 +33,12 @@ const navItems = [
     href: "/",
     icon: LayoutDashboard,
   },
-  {
-    title: "期货",
-    icon: TrendingUp,
-    children: [
-      { title: "交易所 & 品种", href: "/futures/exchanges", icon: Landmark },
-      { title: "品种列表", href: "/futures/symbols", icon: List },
-      { title: "实时行情", href: "/futures/realtime", icon: Zap },
-      { title: "主力合约", href: "/futures/main", icon: Target },
-      { title: "交易费用", href: "/futures/fees", icon: Coins },
-      { title: "外盘期货", href: "/futures/foreign", icon: Globe },
-    ],
-  },
-  {
-    title: "股票",
-    icon: TrendingDown,
-    children: [{ title: "股票列表", href: "/stocks", icon: List }],
-  },
+  { title: "交易所 & 品种", href: "/futures/exchanges", icon: Landmark },
+  { title: "品种列表", href: "/futures/symbols", icon: List },
+  { title: "实时行情", href: "/futures/realtime", icon: Zap },
+  { title: "主力合约", href: "/futures/main", icon: Target },
+  { title: "交易费用", href: "/futures/fees", icon: Coins },
+  { title: "外盘期货", href: "/futures/foreign", icon: Globe },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

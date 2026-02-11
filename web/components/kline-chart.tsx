@@ -29,6 +29,19 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(60);
 
+  // Track dependencies to reset loading state during render
+  // This prevents "setState synchronously within an effect" warnings by
+  // handling the state reset before the effect runs.
+  const [prevSymbol, setPrevSymbol] = useState(symbol);
+  const [prevLimit, setPrevLimit] = useState(limit);
+
+  if (symbol !== prevSymbol || limit !== prevLimit) {
+    setPrevSymbol(symbol);
+    setPrevLimit(limit);
+    setLoading(true);
+    setError(null);
+  }
+
   useEffect(() => {
     let ignore = false;
     if (!chartContainerRef.current || !symbol) return;
@@ -39,8 +52,7 @@ export default function KlineChart({ symbol, name }: KlineChartProps) {
       chartRef.current = null;
     }
 
-    setLoading(true);
-    setError(null);
+    // Note: setLoading(true) and setError(null) are now handled in the render phase check below
 
     getFuturesHistory(symbol, limit)
       .then((res) => {
