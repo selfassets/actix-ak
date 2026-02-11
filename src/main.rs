@@ -53,10 +53,20 @@ async fn main() -> std::io::Result<()> {
             "注册中心客户端已启用，目标: {}",
             config.registry.registry_url
         );
+        // 获取注册用的 host，优先级：register_host 配置 > 本机 hostname > 127.0.0.1
+        let register_host = if !config.registry.register_host.is_empty() {
+            config.registry.register_host.clone()
+        } else {
+            hostname::get()
+                .ok()
+                .and_then(|h| h.into_string().ok())
+                .unwrap_or_else(|| "127.0.0.1".to_string())
+        };
+
         let client = RegistryClient::new(
             config.registry.registry_url.clone(),
             config.registry.service_name.clone(),
-            config.server.host.clone(),
+            register_host,
             config.server.port,
             config.registry.heartbeat_interval_secs,
             config.api.api_key.clone(),

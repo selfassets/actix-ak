@@ -67,14 +67,15 @@ REGISTRY_ENABLED=true REGISTRY_URL=http://localhost:8081 cargo run -p actix-ak
 
 ### actix-ak 客户端配置
 
-| 字段                               | 默认值     | 说明                   |
-| ---------------------------------- | ---------- | ---------------------- |
-| `registry.enabled`                 | `false`    | 是否开启注册到注册中心 |
-| `registry.registry_url`            | `""`       | 注册中心地址           |
-| `registry.service_name`            | `actix-ak` | 服务名称               |
-| `registry.heartbeat_interval_secs` | `10`       | 心跳发送间隔（秒）     |
+| 字段                               | 默认值     | 说明                                        |
+| ---------------------------------- | ---------- | ------------------------------------------- |
+| `registry.enabled`                 | `false`    | 是否开启注册到注册中心                      |
+| `registry.registry_url`            | `""`       | 注册中心地址                                |
+| `registry.service_name`            | `actix-ak` | 服务名称                                    |
+| `registry.register_host`           | `""`       | 注册用的主机地址（域名/IP），为空则自动获取 |
+| `registry.heartbeat_interval_secs` | `10`       | 心跳发送间隔（秒）                          |
 
-支持环境变量覆盖：`REGISTRY_ENABLED`、`REGISTRY_URL`、`SERVICE_NAME`
+支持环境变量覆盖：`REGISTRY_ENABLED`、`REGISTRY_URL`、`SERVICE_NAME`、`REGISTER_HOST`
 
 ---
 

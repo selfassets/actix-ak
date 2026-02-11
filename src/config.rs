@@ -58,6 +58,10 @@ pub struct RegistryConfig {
     /// 当前服务名称
     #[serde(default = "default_service_name")]
     pub service_name: String,
+    /// 注册到注册中心的主机地址（如域名或IP）
+    /// 为空时自动使用本机 hostname
+    #[serde(default)]
+    pub register_host: String,
 }
 
 /// 应用配置
@@ -135,6 +139,7 @@ impl Default for RegistryConfig {
             heartbeat_interval_secs: default_heartbeat_interval(),
             registry_url: String::new(),
             service_name: default_service_name(),
+            register_host: String::new(),
         }
     }
 }
@@ -257,6 +262,12 @@ impl AppConfig {
             if !val.is_empty() {
                 log::info!("使用环境变量 SERVICE_NAME 覆盖配置");
                 self.registry.service_name = val;
+            }
+        }
+        if let Ok(val) = env::var("REGISTER_HOST") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 REGISTER_HOST 覆盖配置");
+                self.registry.register_host = val;
             }
         }
     }
