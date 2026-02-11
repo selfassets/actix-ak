@@ -9,6 +9,7 @@
 - [K 线数据](#k线数据)
 - [主力连续合约](#主力连续合约)
 - [持仓排名](#持仓排名)
+- [仓单日报](#仓单日报)
 - [交易费用和规则](#交易费用和规则)
 - [库存数据](#库存数据)
 - [现货价格及基差](#现货价格及基差)
@@ -629,6 +630,164 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=volume&contract=RB2510&date=2
 
 ---
 
+## 仓单日报
+
+### GET /futures/warehouse/czce
+
+获取郑商所仓单日报。
+
+**查询参数**：
+
+- `date`: 日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+**请求示例**
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "symbol": "TA",
+      "data": [
+        {
+          "warehouse": "中储发展",
+          "warehouse_receipt": 500,
+          "valid_forecast": 100,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+```
+
+### GET /futures/warehouse/dce
+
+获取大商所仓单日报。
+
+**查询参数**：
+
+- `date`: 日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+**请求示例**
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "variety_code": "M",
+      "variety_name": "豆粕",
+      "warehouse": "大连港",
+      "delivery_location": "大连",
+      "last_receipt": 1000,
+      "today_receipt": 1000,
+      "change": 0
+    }
+  ],
+  "error": null
+}
+```
+
+### GET /futures/warehouse/shfe
+
+获取上期所仓单日报。
+
+**查询参数**：
+
+- `date`: 日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+**请求示例**
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "symbol": "CU",
+      "data": [
+        {
+          "variety": "铜",
+          "region": "上海",
+          "warehouse": "国储",
+          "last_receipt": 2000,
+          "today_receipt": 2100,
+          "change": 100,
+          "unit": "吨"
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+```
+
+### GET /futures/warehouse/gfex
+
+获取广期所仓单日报。
+
+**查询参数**：
+
+- `date`: 日期（YYYYMMDD）
+- `vars`: 品种代码列表，逗号分隔（可选）
+
+**请求示例**
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "symbol": "SI",
+      "data": [
+        {
+          "variety": "工业硅",
+          "warehouse": "广东储运",
+          "last_receipt": 500,
+          "today_receipt": 500,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+```
+
+---
+
 ## 交易费用和规则
 
 ### GET /futures/fees
@@ -1072,6 +1231,7 @@ curl -X GET "{{baseUrl}}/futures/foreign/GC/detail" \
 - [K 线数据](#k线数据)
 - [主力连续合约](#主力连续合约)
 - [持仓排名](#持仓排名)
+- [仓单日报](#仓单日报)
 - [交易费用和规则](#交易费用和规则)
 - [库存数据](#库存数据)
 - [现货价格及基差](#现货价格及基差)
@@ -1274,6 +1434,46 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=long&contract=RB2510&date=202
 
 # 空头持仓排名
 curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=short&contract=RB2510&date=20250107" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+---
+
+## 仓单日报
+
+### GET /futures/warehouse/czce
+
+获取郑商所仓单日报。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/warehouse/dce
+
+获取大商所仓单日报。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/warehouse/shfe
+
+获取上期所仓单日报。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+```
+
+### GET /futures/warehouse/gfex
+
+获取广期所仓单日报。
+
+```bash
+curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
   -H "Authorization: Bearer {{token}}"
 ```
 
