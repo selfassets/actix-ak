@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1e21f352.js";
+            window.path_to_searchindex_js = "searchindex-5c9fc462.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f645fb52.js"></script>
@@ -239,11 +239,12 @@
 <tr><td><code>registry.enabled</code></td><td><code>false</code></td><td>是否开启注册到注册中心</td></tr>
 <tr><td><code>registry.registry_url</code></td><td><code>""</code></td><td>注册中心地址</td></tr>
 <tr><td><code>registry.service_name</code></td><td><code>actix-ak</code></td><td>服务名称</td></tr>
+<tr><td><code>registry.register_host</code></td><td><code>""</code></td><td>注册用的主机地址（域名/IP），为空则自动获取</td></tr>
 <tr><td><code>registry.heartbeat_interval_secs</code></td><td><code>10</code></td><td>心跳发送间隔（秒）</td></tr>
 </tbody>
 </table>
 </div>
-<p>支持环境变量覆盖：<code>REGISTRY_ENABLED</code>、<code>REGISTRY_URL</code>、<code>SERVICE_NAME</code></p>
+<p>支持环境变量覆盖：<code>REGISTRY_ENABLED</code>、<code>REGISTRY_URL</code>、<code>SERVICE_NAME</code>、<code>REGISTER_HOST</code></p>
 <hr>
 <h2 id="api-接口"><a class="header" href="#api-接口">API 接口</a></h2>
 <p>Base URL: <code>http://localhost:8081/api/v1/registry</code></p>
