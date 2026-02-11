@@ -83,15 +83,15 @@ export default function HomePage() {
 
       {/* Health Status */}
       <Card className="border-dashed">
-        <CardContent className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
             <span className="text-lg">🖥️</span>
-            <div>
-              <p className="text-sm font-medium">后端服务状态</p>
-              <p className="text-xs text-muted-foreground">
-                API Server: localhost:8080
-              </p>
-            </div>
+            后端服务状态
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            API Server: localhost:8080
           </div>
           {health === "loading" ? (
             <Skeleton className="h-6 w-16 rounded-full" />
@@ -143,9 +143,11 @@ export default function HomePage() {
           { label: "API 接口", value: "30+", icon: "🔗" },
         ].map((stat) => (
           <Card key={stat.label} className="text-center">
-            <CardContent className="pt-6">
-              <span className="text-2xl">{stat.icon}</span>
-              <p className="text-2xl font-bold mt-2">{stat.value}</p>
+            <CardHeader className="pt-6 pb-2">
+              <span className="text-2xl mx-auto">{stat.icon}</span>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
             </CardContent>
           </Card>
