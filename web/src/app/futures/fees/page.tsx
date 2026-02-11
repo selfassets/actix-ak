@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -100,6 +101,31 @@ export default function FeesPage() {
     remark: "备注",
   };
 
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredData = (data: Record<string, unknown>[]) => {
+    if (!searchTerm) return data;
+    const lowerTerm = searchTerm.toLowerCase();
+    return data.filter((item) => {
+      // Search in specific fields relevant to the user
+      const searchFields = [
+        "exchange",
+        "contract_code",
+        "contract_name",
+        "product_code",
+        "product_name",
+        "code",
+        "label",
+      ];
+      return searchFields.some((field) => {
+        const value = item[field];
+        return (
+          typeof value === "string" && value.toLowerCase().includes(lowerTerm)
+        );
+      });
+    });
+  };
+
   const renderTable = (
     data: Record<string, unknown>[],
     loading: boolean,
@@ -117,49 +143,84 @@ export default function FeesPage() {
     if (error) {
       return <p className="text-center text-destructive py-8">{error}</p>;
     }
-    if (data.length === 0) {
-      return <p className="text-center text-muted-foreground py-8">暂无数据</p>;
+
+    // Filter data before checking length
+    const displayData = filteredData(data);
+
+    if (displayData.length === 0) {
+      return (
+        <p className="text-center text-muted-foreground py-8">
+          {searchTerm ? "未找到匹配数据" : "暂无数据"}
+        </p>
+      );
     }
 
-    const columns = Object.keys(data[0]);
+    const columns = Object.keys(displayData[0]);
     return (
-      <div className="rounded-md border overflow-auto max-h-[500px]">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col} className="whitespace-nowrap">
-                  {columnNameMap[col] || col}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((row, i) => (
-              <TableRow key={i}>
+      <div className="rounded-md border overflow-hidden">
+        <div className="overflow-auto max-h-[600px] relative">
+          <Table>
+            <TableHeader className="sticky top-0 bg-secondary/90 backdrop-blur-sm z-10 shadow-sm">
+              <TableRow className="hover:bg-transparent">
                 {columns.map((col) => (
-                  <TableCell
+                  <TableHead
                     key={col}
-                    className="font-mono text-xs whitespace-nowrap"
+                    className="whitespace-nowrap font-bold text-foreground"
                   >
-                    {String(row[col] ?? "-")}
-                  </TableCell>
+                    {columnNameMap[col] || col}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {displayData.map((row, i) => (
+                <TableRow
+                  key={i}
+                  className="hover:bg-muted/50 transition-colors"
+                >
+                  {columns.map((col) => {
+                    const val = String(row[col] ?? "-");
+                    // Highlight logic could go here if needed
+                    return (
+                      <TableCell
+                        key={col}
+                        className="font-mono text-xs whitespace-nowrap py-2"
+                      >
+                        {val}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="bg-muted/30 p-2 text-xs text-center text-muted-foreground border-t">
+          共 {displayData.length} 条数据
+        </div>
       </div>
     );
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">交易费用</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          期货品种手续费及交易规则参照
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            交易费用
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            查询各大交易所期货品种的手续费及保证金详细规则
+          </p>
+        </div>
+        <div className="w-full md:w-72">
+          <Input
+            placeholder="搜索交易所、品种、代码..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-background"
+          />
+        </div>
       </div>
 
       {/* 费用参照表 */}
