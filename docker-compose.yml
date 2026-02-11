@@ -1,16 +1,43 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  registry-server:
+    build:
+      context: .
+      dockerfile: registry-server/Dockerfile
+    container_name: registry-server
+    ports:
+      - "8081:8081"
+    environment:
+      - RUST_LOG=info
+      - SERVER_PORT=8081
+      - HEARTBEAT_TIMEOUT_SECS=30
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://localhost:8081/api/v1/registry/instances"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   akshare-backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: akshare-backend
     ports:
       - "8080:8080"
     environment:
       - RUST_LOG=info
+      - REGISTRY_ENABLED=true
+      - REGISTRY_URL=http://registry-server:8081
+    depends_on:
+      registry-server:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3

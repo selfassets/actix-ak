@@ -26,6 +26,7 @@ cargo run --features swagger
 - [健康检查](health)
 - [期货接口](futures)
 - [股票接口](stocks)
+- [注册中心](registry)
 - [前端项目](web)
 
 ---

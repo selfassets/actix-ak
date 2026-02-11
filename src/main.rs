@@ -15,6 +15,7 @@ use env_logger::Env;
 
 use crate::config::AppConfig;
 use crate::middleware::ApiKeyMiddleware;
+use crate::services::registry_client::RegistryClient;
 
 // Swagger 相关导入（仅在启用 swagger feature 时编译）
 #[cfg(feature = "swagger")]
@@ -45,6 +46,23 @@ async fn main() -> std::io::Result<()> {
     let api_key = config.api.api_key.clone();
     let bind_addr = config.bind_addr();
     let workers = config.server.workers;
+
+    // 配置开启注册且注册中心地址非空时，启动客户端注册和心跳任务
+    if config.registry.enabled && !config.registry.registry_url.is_empty() {
+        log::info!(
+            "注册中心客户端已启用，目标: {}",
+            config.registry.registry_url
+        );
+        let client = RegistryClient::new(
+            config.registry.registry_url.clone(),
+            config.registry.service_name.clone(),
+            config.server.host.clone(),
+            config.server.port,
+            config.registry.heartbeat_interval_secs,
+            config.api.api_key.clone(),
+        );
+        client.start_heartbeat_task();
+    }
 
     // 创建并启动 HTTP 服务器
     let mut server = HttpServer::new(move || {

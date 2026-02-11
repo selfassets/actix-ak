@@ -3,8 +3,8 @@
 //! 包含所有 API 端点的处理函数
 
 pub mod futures; // 期货相关接口
-pub mod health;
-pub mod stock; // 股票相关接口 // 健康检查接口
+pub mod health; // 健康检查接口
+pub mod stock; // 股票相关接口
 
 #[cfg(feature = "swagger")]
 pub mod openapi; // OpenAPI 文档

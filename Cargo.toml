@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "registry-server"]
+resolver = "2"
+
 [package]
 name = "actix-ak"
 version = "0.1.0"
@@ -12,6 +16,7 @@ swagger = ["utoipa", "utoipa-swagger-ui"]
 utoipa = { version = "5", features = ["actix_extras", "chrono"], optional = true }
 utoipa-swagger-ui = { version = "9", features = ["actix-web"], optional = true }
 actix-web = "4.4"
+awc = "3"
 actix-cors = "0.7"
 tokio = { version = "1.0", features = ["full", "rt-multi-thread", "macros"] }
 serde = { version = "1.0", features = ["derive"] }

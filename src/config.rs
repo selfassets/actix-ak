@@ -43,6 +43,23 @@ pub struct LogConfig {
     pub level: String,
 }
 
+/// 注册中心客户端配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegistryConfig {
+    /// 是否开启注册到注册中心
+    #[serde(default)]
+    pub enabled: bool,
+    /// 心跳发送间隔（秒）
+    #[serde(default = "default_heartbeat_interval")]
+    pub heartbeat_interval_secs: u64,
+    /// 注册中心地址
+    #[serde(default)]
+    pub registry_url: String,
+    /// 当前服务名称
+    #[serde(default = "default_service_name")]
+    pub service_name: String,
+}
+
 /// 应用配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -55,6 +72,9 @@ pub struct AppConfig {
     /// 日志配置
     #[serde(default)]
     pub log: LogConfig,
+    /// 注册中心配置
+    #[serde(default)]
+    pub registry: RegistryConfig,
 }
 
 // 默认值函数
@@ -72,6 +92,12 @@ fn default_connect_timeout() -> u64 {
 }
 fn default_log_level() -> String {
     "info".to_string()
+}
+fn default_heartbeat_interval() -> u64 {
+    10
+}
+fn default_service_name() -> String {
+    "actix-ak".to_string()
 }
 
 impl Default for ServerConfig {
@@ -102,12 +128,24 @@ impl Default for LogConfig {
     }
 }
 
+impl Default for RegistryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            heartbeat_interval_secs: default_heartbeat_interval(),
+            registry_url: String::new(),
+            service_name: default_service_name(),
+        }
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
             api: ApiConfig::default(),
             log: LogConfig::default(),
+            registry: RegistryConfig::default(),
         }
     }
 }
@@ -202,11 +240,30 @@ impl AppConfig {
                 }
             }
         }
+        // 注册中心相关环境变量
+        if let Ok(val) = env::var("REGISTRY_ENABLED") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 REGISTRY_ENABLED 覆盖配置");
+                self.registry.enabled = val == "true" || val == "1";
+            }
+        }
+        if let Ok(val) = env::var("REGISTRY_URL") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 REGISTRY_URL 覆盖配置");
+                self.registry.registry_url = val;
+            }
+        }
+        if let Ok(val) = env::var("SERVICE_NAME") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 SERVICE_NAME 覆盖配置");
+                self.registry.service_name = val;
+            }
+        }
     }
 
     /// 加载配置，优先从文件，失败则使用默认值，最后应用环境变量覆盖
     pub fn load() -> Self {
-        let config_paths = ["config.json", "config/config.json"];
+        let config_paths = ["config.json", "config/config.json", "../config.json"];
 
         let mut config = None;
         for path in config_paths {
