@@ -21,7 +21,6 @@ import {
   getFuturesRealtime,
   FuturesInfo,
 } from "@/lib/api";
-import KlineChart from "@/components/kline-chart";
 
 const quickSymbols = [
   "CU2602",
@@ -105,10 +104,6 @@ function RealtimeContent() {
   const [results, setResults] = useState<FuturesInfo[]>([]);
   const [loading, setLoading] = useState(!!urlSymbol);
   const [error, setError] = useState<string | null>(null);
-  const [selectedChart, setSelectedChart] = useState<{
-    symbol: string;
-    name: string;
-  } | null>(null);
 
   useEffect(() => {
     if (urlSymbol) {
@@ -259,27 +254,16 @@ function RealtimeContent() {
                   size="sm"
                   className="w-full gap-1.5"
                   onClick={() =>
-                    setSelectedChart(
-                      selectedChart?.symbol === r.symbol
-                        ? null
-                        : { symbol: r.symbol, name: r.name },
+                    router.push(
+                      `/futures/kline?symbol=${r.symbol}&name=${encodeURIComponent(r.name)}`,
                     )
                   }
                 >
-                  📈{" "}
-                  {selectedChart?.symbol === r.symbol ? "收起K线" : "查看K线"}
+                  📈 查看K线
                 </Button>
               </div>
             ))}
           </div>
-
-          {/* K-Line Chart */}
-          {selectedChart && (
-            <KlineChart
-              symbol={selectedChart.symbol}
-              name={selectedChart.name}
-            />
-          )}
 
           {/* Results - Table */}
           {results.length > 1 && (
