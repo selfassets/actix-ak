@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c26b7911.js";
+            window.path_to_searchindex_js = "searchindex-3cb9a406.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-282ef506.js"></script>
+        <script src="toc-f348df30.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -202,6 +202,7 @@
 <li><a href="health">健康检查</a></li>
 <li><a href="futures">期货接口</a></li>
 <li><a href="stocks">股票接口</a></li>
+<li><a href="web">前端项目</a></li>
 </ul>
 <hr>
 <h2 id="快速开始"><a class="header" href="#快速开始">快速开始</a></h2>
@@ -251,6 +252,7 @@
 <li><a href="#k线数据">K 线数据</a></li>
 <li><a href="#主力连续合约">主力连续合约</a></li>
 <li><a href="#持仓排名">持仓排名</a></li>
+<li><a href="#仓单日报">仓单日报</a></li>
 <li><a href="#交易费用和规则">交易费用和规则</a></li>
 <li><a href="#库存数据">库存数据</a></li>
 <li><a href="#现货价格及基差">现货价格及基差</a></li>
@@ -718,6 +720,130 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=volume&amp;contract=RB2510&am
 }
 </code></pre>
 <hr>
+<h2 id="仓单日报"><a class="header" href="#仓单日报">仓单日报</a></h2>
+<h3 id="get-futureswarehouseczce"><a class="header" href="#get-futureswarehouseczce">GET /futures/warehouse/czce</a></h3>
+<p>获取郑商所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "TA",
+      "data": [
+        {
+          "warehouse": "中储发展",
+          "warehouse_receipt": 500,
+          "valid_forecast": 100,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehousedce"><a class="header" href="#get-futureswarehousedce">GET /futures/warehouse/dce</a></h3>
+<p>获取大商所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "variety_code": "M",
+      "variety_name": "豆粕",
+      "warehouse": "大连港",
+      "delivery_location": "大连",
+      "last_receipt": 1000,
+      "today_receipt": 1000,
+      "change": 0
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehouseshfe"><a class="header" href="#get-futureswarehouseshfe">GET /futures/warehouse/shfe</a></h3>
+<p>获取上期所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "CU",
+      "data": [
+        {
+          "variety": "铜",
+          "region": "上海",
+          "warehouse": "国储",
+          "last_receipt": 2000,
+          "today_receipt": 2100,
+          "change": 100,
+          "unit": "吨"
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehousegfex"><a class="header" href="#get-futureswarehousegfex">GET /futures/warehouse/gfex</a></h3>
+<p>获取广期所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "SI",
+      "data": [
+        {
+          "variety": "工业硅",
+          "warehouse": "广东储运",
+          "last_receipt": 500,
+          "today_receipt": 500,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<hr>
 <h2 id="交易费用和规则"><a class="header" href="#交易费用和规则">交易费用和规则</a></h2>
 <h3 id="get-futuresfees"><a class="header" href="#get-futuresfees">GET /futures/fees</a></h3>
 <p>获取期货交易费用参照表。</p>
@@ -1053,6 +1179,7 @@ curl -X POST "{{baseUrl}}/futures/foreign/realtime" \
 <li><a href="#k线数据">K 线数据</a></li>
 <li><a href="#主力连续合约">主力连续合约</a></li>
 <li><a href="#持仓排名">持仓排名</a></li>
+<li><a href="#仓单日报">仓单日报</a></li>
 <li><a href="#交易费用和规则">交易费用和规则</a></li>
 <li><a href="#库存数据">库存数据</a></li>
 <li><a href="#现货价格及基差">现货价格及基差</a></li>
@@ -1189,6 +1316,28 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=long&amp;contract=RB2510&amp;
 
 # 空头持仓排名
 curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=short&amp;contract=RB2510&amp;date=20250107" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<hr>
+<h2 id="仓单日报-1"><a class="header" href="#仓单日报-1">仓单日报</a></h2>
+<h3 id="get-futureswarehouseczce-1"><a class="header" href="#get-futureswarehouseczce-1">GET /futures/warehouse/czce</a></h3>
+<p>获取郑商所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehousedce-1"><a class="header" href="#get-futureswarehousedce-1">GET /futures/warehouse/dce</a></h3>
+<p>获取大商所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehouseshfe-1"><a class="header" href="#get-futureswarehouseshfe-1">GET /futures/warehouse/shfe</a></h3>
+<p>获取上期所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehousegfex-1"><a class="header" href="#get-futureswarehousegfex-1">GET /futures/warehouse/gfex</a></h3>
+<p>获取广期所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
   -H "Authorization: Bearer {{token}}"
 </code></pre>
 <hr>
@@ -1427,6 +1576,78 @@ curl -X POST "{{baseUrl}}/futures/foreign/realtime" \
 </code></pre>
 <hr>
 <p><a href="#akshare-backend-api-文档">返回首页</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="前端项目"><a class="header" href="#前端项目">前端项目</a></h1>
+<p>基于 Next.js 15 + Shadcn UI 构建的现代 Web 前端项目，提供期货和股票数据的可视化展示。</p>
+<h2 id="技术栈"><a class="header" href="#技术栈">技术栈</a></h2>
+<ul>
+<li><strong>框架</strong>: <a href="https://nextjs.org/">Next.js 15</a> (App Router)</li>
+<li><strong>UI 组件库</strong>: <a href="https://ui.shadcn.com/">Shadcn UI</a> (基于 Radix UI + Tailwind CSS)</li>
+<li><strong>图表库</strong>: <a href="https://tradingview.github.io/lightweight-charts/">Lightweight Charts</a> (高性能金融图表)</li>
+<li><strong>样式</strong>: Tailwind CSS 4</li>
+<li><strong>包管理器</strong>: pnpm</li>
+</ul>
+<h2 id="目录结构"><a class="header" href="#目录结构">目录结构</a></h2>
+<pre><code>web/
+├── app/                # Next.js App Router 页面
+│   ├── futures/        # 期货相关页面
+│   │   ├── [symbol]/   # 详情页
+│   │   ├── realtime/   # 实时行情
+│   │   └── symbols/    # 品种列表
+│   └── page.tsx        # 首页
+├── components/         # UI 组件
+│   ├── ui/             # Shadcn 基础组件
+│   └── ...             # 业务组件
+├── lib/                # 工具函数
+│   ├── api.ts          # API 接口封装
+│   └── utils.ts        # 通用工具
+└── public/             # 静态资源
+</code></pre>
+<h2 id="快速开始-1"><a class="header" href="#快速开始-1">快速开始</a></h2>
+<h3 id="1-安装依赖"><a class="header" href="#1-安装依赖">1. 安装依赖</a></h3>
+<pre><code class="language-bash">cd web
+pnpm install
+</code></pre>
+<h3 id="2-配置环境变量"><a class="header" href="#2-配置环境变量">2. 配置环境变量</a></h3>
+<p>复制 <code>.env.example</code> 到 <code>.env.local</code> 并修改配置：</p>
+<pre><code class="language-bash">cp .env.example .env.local
+</code></pre>
+<p><code>.env.local</code> 内容示例：</p>
+<pre><code class="language-env">NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
+NEXT_PUBLIC_API_TOKEN=12345678
+</code></pre>
+<h3 id="3-启动开发服务器"><a class="header" href="#3-启动开发服务器">3. 启动开发服务器</a></h3>
+<pre><code class="language-bash">pnpm dev
+</code></pre>
+<p>访问 <a href="http://localhost:3000">http://localhost:3000</a> 查看效果。</p>
+<h2 id="主要功能"><a class="header" href="#主要功能">主要功能</a></h2>
+<h3 id="期货行情"><a class="header" href="#期货行情">期货行情</a></h3>
+<ul>
+<li><strong>实时看板</strong>: 展示主力合约的实时价格、涨跌幅。</li>
+<li><strong>K 线图表</strong>: 支持日 K、分钟 K 线，集成 TradingView 轻量级图表。</li>
+<li><strong>持仓分析</strong>: 可视化展示多空持仓排名。</li>
+<li><strong>仓单日报</strong>: 查看各交易所仓单数据。</li>
+</ul>
+<h3 id="股票行情"><a class="header" href="#股票行情">股票行情</a></h3>
+<ul>
+<li><strong>列表展示</strong>: A 股实时行情列表。</li>
+<li><strong>个股详情</strong>: 实时盘口数据和历史走势。</li>
+</ul>
+<h2 id="开发指南"><a class="header" href="#开发指南">开发指南</a></h2>
+<h3 id="添加新组件"><a class="header" href="#添加新组件">添加新组件</a></h3>
+<p>使用 Shadcn CLI 添加组件：</p>
+<pre><code class="language-bash">pnpm dlx shadcn@latest add [component-name]
+</code></pre>
+<p>例如添加按钮组件：</p>
+<pre><code class="language-bash">pnpm dlx shadcn@latest add button
+</code></pre>
+<h3 id="接口调用"><a class="header" href="#接口调用">接口调用</a></h3>
+<p>所有后端 API 调用封装在 <code>lib/api.ts</code> 中，使用 fetch 进行请求。</p>
+<p>示例：</p>
+<pre><code class="language-typescript">import { getFuturesInfo } from "@/lib/api";
+
+const data = await getFuturesInfo("RB2510");
+</code></pre>
 
                     </main>
 

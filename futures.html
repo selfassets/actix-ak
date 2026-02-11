@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c26b7911.js";
+            window.path_to_searchindex_js = "searchindex-3cb9a406.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-282ef506.js"></script>
+        <script src="toc-f348df30.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,6 +186,7 @@
 <li><a href="#k线数据">K 线数据</a></li>
 <li><a href="#主力连续合约">主力连续合约</a></li>
 <li><a href="#持仓排名">持仓排名</a></li>
+<li><a href="#仓单日报">仓单日报</a></li>
 <li><a href="#交易费用和规则">交易费用和规则</a></li>
 <li><a href="#库存数据">库存数据</a></li>
 <li><a href="#现货价格及基差">现货价格及基差</a></li>
@@ -653,6 +654,130 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=volume&amp;contract=RB2510&am
 }
 </code></pre>
 <hr>
+<h2 id="仓单日报"><a class="header" href="#仓单日报">仓单日报</a></h2>
+<h3 id="get-futureswarehouseczce"><a class="header" href="#get-futureswarehouseczce">GET /futures/warehouse/czce</a></h3>
+<p>获取郑商所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "TA",
+      "data": [
+        {
+          "warehouse": "中储发展",
+          "warehouse_receipt": 500,
+          "valid_forecast": 100,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehousedce"><a class="header" href="#get-futureswarehousedce">GET /futures/warehouse/dce</a></h3>
+<p>获取大商所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "variety_code": "M",
+      "variety_name": "豆粕",
+      "warehouse": "大连港",
+      "delivery_location": "大连",
+      "last_receipt": 1000,
+      "today_receipt": 1000,
+      "change": 0
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehouseshfe"><a class="header" href="#get-futureswarehouseshfe">GET /futures/warehouse/shfe</a></h3>
+<p>获取上期所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "CU",
+      "data": [
+        {
+          "variety": "铜",
+          "region": "上海",
+          "warehouse": "国储",
+          "last_receipt": 2000,
+          "today_receipt": 2100,
+          "change": 100,
+          "unit": "吨"
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<h3 id="get-futureswarehousegfex"><a class="header" href="#get-futureswarehousegfex">GET /futures/warehouse/gfex</a></h3>
+<p>获取广期所仓单日报。</p>
+<p><strong>查询参数</strong>：</p>
+<ul>
+<li><code>date</code>: 日期（YYYYMMDD）</li>
+<li><code>vars</code>: 品种代码列表，逗号分隔（可选）</li>
+</ul>
+<p><strong>请求示例</strong></p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<p><strong>响应示例</strong></p>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "symbol": "SI",
+      "data": [
+        {
+          "variety": "工业硅",
+          "warehouse": "广东储运",
+          "last_receipt": 500,
+          "today_receipt": 500,
+          "change": 0
+        }
+      ]
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<hr>
 <h2 id="交易费用和规则"><a class="header" href="#交易费用和规则">交易费用和规则</a></h2>
 <h3 id="get-futuresfees"><a class="header" href="#get-futuresfees">GET /futures/fees</a></h3>
 <p>获取期货交易费用参照表。</p>
@@ -988,6 +1113,7 @@ curl -X POST "{{baseUrl}}/futures/foreign/realtime" \
 <li><a href="#k线数据">K 线数据</a></li>
 <li><a href="#主力连续合约">主力连续合约</a></li>
 <li><a href="#持仓排名">持仓排名</a></li>
+<li><a href="#仓单日报">仓单日报</a></li>
 <li><a href="#交易费用和规则">交易费用和规则</a></li>
 <li><a href="#库存数据">库存数据</a></li>
 <li><a href="#现货价格及基差">现货价格及基差</a></li>
@@ -1124,6 +1250,28 @@ curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=long&amp;contract=RB2510&amp;
 
 # 空头持仓排名
 curl -X GET "{{baseUrl}}/futures/hold_pos?pos_type=short&amp;contract=RB2510&amp;date=20250107" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<hr>
+<h2 id="仓单日报-1"><a class="header" href="#仓单日报-1">仓单日报</a></h2>
+<h3 id="get-futureswarehouseczce-1"><a class="header" href="#get-futureswarehouseczce-1">GET /futures/warehouse/czce</a></h3>
+<p>获取郑商所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/czce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehousedce-1"><a class="header" href="#get-futureswarehousedce-1">GET /futures/warehouse/dce</a></h3>
+<p>获取大商所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/dce?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehouseshfe-1"><a class="header" href="#get-futureswarehouseshfe-1">GET /futures/warehouse/shfe</a></h3>
+<p>获取上期所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/shfe?date=20240102" \
+  -H "Authorization: Bearer {{token}}"
+</code></pre>
+<h3 id="get-futureswarehousegfex-1"><a class="header" href="#get-futureswarehousegfex-1">GET /futures/warehouse/gfex</a></h3>
+<p>获取广期所仓单日报。</p>
+<pre><code class="language-bash">curl -X GET "{{baseUrl}}/futures/warehouse/gfex?date=20240102" \
   -H "Authorization: Bearer {{token}}"
 </code></pre>
 <hr>
