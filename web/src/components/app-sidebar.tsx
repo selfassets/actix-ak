@@ -12,29 +12,43 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Landmark,
+  List,
+  Zap,
+  Target,
+  Coins,
+  Globe,
+  TrendingDown,
+  ChevronRight,
+  Menu,
+} from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 const navItems = [
   {
     title: "首页",
     href: "/",
-    icon: "📊",
+    icon: LayoutDashboard,
   },
   {
     title: "期货",
-    icon: "📈",
+    icon: TrendingUp,
     children: [
-      { title: "交易所 & 品种", href: "/futures/exchanges", icon: "🏛️" },
-      { title: "品种列表", href: "/futures/symbols", icon: "📋" },
-      { title: "实时行情", href: "/futures/realtime", icon: "⚡" },
-      { title: "主力合约", href: "/futures/main", icon: "🎯" },
-      { title: "交易费用", href: "/futures/fees", icon: "💰" },
-      { title: "外盘期货", href: "/futures/foreign", icon: "🌍" },
+      { title: "交易所 & 品种", href: "/futures/exchanges", icon: Landmark },
+      { title: "品种列表", href: "/futures/symbols", icon: List },
+      { title: "实时行情", href: "/futures/realtime", icon: Zap },
+      { title: "主力合约", href: "/futures/main", icon: Target },
+      { title: "交易费用", href: "/futures/fees", icon: Coins },
+      { title: "外盘期货", href: "/futures/foreign", icon: Globe },
     ],
   },
   {
     title: "股票",
-    icon: "📉",
-    children: [{ title: "股票列表", href: "/stocks", icon: "📋" }],
+    icon: TrendingDown,
+    children: [{ title: "股票列表", href: "/stocks", icon: List }],
   },
 ];
 
@@ -53,9 +67,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex flex-col h-full">
       <div className="p-6">
         <Link href="/" className="flex items-center gap-3" onClick={onNavigate}>
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-            AK
-          </div>
+          <Logo />
           <div>
             <h1 className="text-base font-bold tracking-tight">Ak</h1>
             <p className="text-[11px] text-muted-foreground">数据展示平台</p>
@@ -69,23 +81,13 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <div key={item.title} className="mb-1">
               <button
                 onClick={() => toggleGroup(item.title)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md transition-colors group"
               >
-                <span className="text-base">{item.icon}</span>
+                <item.icon className="w-4 h-4" />
                 <span>{item.title}</span>
-                <svg
+                <ChevronRight
                   className={`ml-auto w-4 h-4 transition-transform ${openGroups[item.title] ? "rotate-90" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                />
               </button>
               {openGroups[item.title] && (
                 <div className="ml-3 pl-3 border-l border-border/50 space-y-0.5 mt-0.5">
@@ -100,7 +102,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
-                      <span className="text-sm">{child.icon}</span>
+                      <child.icon className="w-4 h-4" />
                       <span>{child.title}</span>
                     </Link>
                   ))}
@@ -118,7 +120,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
-              <span className="text-base">{item.icon}</span>
+              <item.icon className="w-4 h-4" />
               <span>{item.title}</span>
             </Link>
           ),
@@ -154,19 +156,7 @@ export function AppSidebar() {
               size="icon"
               className="backdrop-blur-sm bg-background/80"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
+              <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
