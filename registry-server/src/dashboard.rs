@@ -376,10 +376,12 @@ pub fn dashboard_html() -> &'static str {
         function setUser(name) { localStorage.setItem('registry_user', name); }
 
         // ===== 视图切换 =====
+        let dataRefreshTimer = null;
+
         function showLogin() {
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
-            if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+            if (dataRefreshTimer) { clearInterval(dataRefreshTimer); dataRefreshTimer = null; }
         }
         function showDashboard() {
             document.getElementById('login-view').classList.add('hidden');
@@ -388,10 +390,8 @@ pub fn dashboard_html() -> &'static str {
             document.getElementById('user-display').textContent = user;
             document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
             refresh();
-            refreshTimer = setInterval(refresh, 5000);
+            dataRefreshTimer = setInterval(refresh, 5000);
         }
-
-        let refreshTimer = null;
 
         // ===== 登录 =====
         document.getElementById('login-form').addEventListener('submit', async function(e) {
@@ -524,7 +524,7 @@ pub fn dashboard_html() -> &'static str {
         }
 
         // ===== Token 自动续期 =====
-        let refreshTimer = null;
+        let tokenRefreshTimer = null;
 
         function parseTokenExpiry(token) {
             try {
@@ -534,7 +534,7 @@ pub fn dashboard_html() -> &'static str {
         }
 
         function scheduleTokenRefresh() {
-            if (refreshTimer) clearTimeout(refreshTimer);
+            if (tokenRefreshTimer) clearTimeout(tokenRefreshTimer);
             const token = getToken();
             if (!token) return;
 
@@ -543,7 +543,7 @@ pub fn dashboard_html() -> &'static str {
 
             // 在过期前 5 分钟刷新
             const delay = Math.max(expiry - Date.now() - 5 * 60 * 1000, 10000);
-            refreshTimer = setTimeout(async () => {
+            tokenRefreshTimer = setTimeout(async () => {
                 const currentToken = getToken();
                 if (!currentToken) return;
                 try {
