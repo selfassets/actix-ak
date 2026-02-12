@@ -29,6 +29,23 @@ pub struct LogConfig {
     pub level: String,
 }
 
+/// 认证配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthConfig {
+    /// JWT 密钥
+    #[serde(default = "default_jwt_secret")]
+    pub jwt_secret: String,
+    /// 默认管理员用户名
+    #[serde(default = "default_admin_username")]
+    pub admin_username: String,
+    /// 默认管理员密码
+    #[serde(default = "default_admin_password")]
+    pub admin_password: String,
+    /// Token 过期时间（小时）
+    #[serde(default = "default_token_expire_hours")]
+    pub token_expire_hours: u64,
+}
+
 /// 应用配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -38,6 +55,8 @@ pub struct AppConfig {
     pub registry: RegistryConfig,
     #[serde(default)]
     pub log: LogConfig,
+    #[serde(default)]
+    pub auth: AuthConfig,
 }
 
 fn default_host() -> String {
@@ -51,6 +70,18 @@ fn default_heartbeat_timeout() -> u64 {
 }
 fn default_log_level() -> String {
     "info".to_string()
+}
+fn default_jwt_secret() -> String {
+    "registry-server-secret-key".to_string()
+}
+fn default_admin_username() -> String {
+    "admin".to_string()
+}
+fn default_admin_password() -> String {
+    "admin123".to_string()
+}
+fn default_token_expire_hours() -> u64 {
+    24
 }
 
 impl Default for ServerConfig {
@@ -78,12 +109,24 @@ impl Default for LogConfig {
     }
 }
 
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            jwt_secret: default_jwt_secret(),
+            admin_username: default_admin_username(),
+            admin_password: default_admin_password(),
+            token_expire_hours: default_token_expire_hours(),
+        }
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             server: ServerConfig::default(),
             registry: RegistryConfig::default(),
             log: LogConfig::default(),
+            auth: AuthConfig::default(),
         }
     }
 }
@@ -141,6 +184,27 @@ impl AppConfig {
         if let Ok(val) = env::var("LOG_LEVEL") {
             if !val.is_empty() {
                 config.log.level = val;
+            }
+        }
+        // 认证相关环境变量
+        if let Ok(val) = env::var("JWT_SECRET") {
+            if !val.is_empty() {
+                config.auth.jwt_secret = val;
+            }
+        }
+        if let Ok(val) = env::var("ADMIN_USERNAME") {
+            if !val.is_empty() {
+                config.auth.admin_username = val;
+            }
+        }
+        if let Ok(val) = env::var("ADMIN_PASSWORD") {
+            if !val.is_empty() {
+                config.auth.admin_password = val;
+            }
+        }
+        if let Ok(val) = env::var("TOKEN_EXPIRE_HOURS") {
+            if let Ok(hours) = val.parse::<u64>() {
+                config.auth.token_expire_hours = hours;
             }
         }
 

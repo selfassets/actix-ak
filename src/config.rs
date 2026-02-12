@@ -62,6 +62,12 @@ pub struct RegistryConfig {
     /// 为空时自动使用本机 hostname
     #[serde(default)]
     pub register_host: String,
+    /// 注册中心登录用户名
+    #[serde(default)]
+    pub registry_username: String,
+    /// 注册中心登录密码
+    #[serde(default)]
+    pub registry_password: String,
 }
 
 /// 应用配置
@@ -140,6 +146,8 @@ impl Default for RegistryConfig {
             registry_url: String::new(),
             service_name: default_service_name(),
             register_host: String::new(),
+            registry_username: String::new(),
+            registry_password: String::new(),
         }
     }
 }
@@ -268,6 +276,18 @@ impl AppConfig {
             if !val.is_empty() {
                 log::info!("使用环境变量 REGISTER_HOST 覆盖配置");
                 self.registry.register_host = val;
+            }
+        }
+        if let Ok(val) = env::var("REGISTRY_USERNAME") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 REGISTRY_USERNAME 覆盖配置");
+                self.registry.registry_username = val;
+            }
+        }
+        if let Ok(val) = env::var("REGISTRY_PASSWORD") {
+            if !val.is_empty() {
+                log::info!("使用环境变量 REGISTRY_PASSWORD 覆盖配置");
+                self.registry.registry_password = val;
             }
         }
     }

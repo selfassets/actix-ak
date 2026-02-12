@@ -8,5 +8,11 @@
   },
   "log": {
     "level": "info"
+  },
+  "auth": {
+    "jwt_secret": "registry-server-secret-key",
+    "admin_username": "admin",
+    "admin_password": "admin123",
+    "token_expire_hours": 24
   }
 }

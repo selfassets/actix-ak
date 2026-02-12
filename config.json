@@ -16,6 +16,8 @@
     "enabled": false,
     "heartbeat_interval_secs": 10,
     "registry_url": "",
-    "service_name": "actix-ak"
+    "service_name": "actix-ak",
+    "registry_username": "",
+    "registry_password": ""
   }
 }

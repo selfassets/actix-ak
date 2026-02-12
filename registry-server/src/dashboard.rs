@@ -1,4 +1,4 @@
-//! 注册中心仪表板页面
+//! 注册中心仪表板页面（含登录功能）
 
 /// 返回仪表板 HTML 页面
 pub fn dashboard_html() -> &'static str {
@@ -58,6 +58,9 @@ pub fn dashboard_html() -> &'static str {
         }
         .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
         .header h1 span { color: var(--text-dim); font-weight: 400; font-size: 0.9rem; margin-left: .5rem; }
+        .header-right {
+            display: flex; align-items: center; gap: 1rem;
+        }
         .refresh-info {
             display: flex; align-items: center; gap: .5rem;
             color: var(--text-dim); font-size: 0.8rem;
@@ -70,6 +73,27 @@ pub fn dashboard_html() -> &'static str {
             0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
             50% { opacity: .7; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
         }
+        .user-badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .375rem .875rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem; color: var(--text-dim);
+        }
+        .user-badge .avatar {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; color: #fff; font-weight: 600;
+        }
+        .btn-logout {
+            background: none; border: 1px solid var(--border);
+            color: var(--text-dim); padding: .375rem .75rem;
+            border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+            transition: all .2s;
+        }
+        .btn-logout:hover { border-color: var(--red); color: var(--red); }
 
         /* Stats Cards */
         .stats {
@@ -154,6 +178,108 @@ pub fn dashboard_html() -> &'static str {
         .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .5; }
         .empty-state p { font-size: 0.9rem; }
 
+        /* ============ Login ============ */
+        .login-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn .4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-card .logo-center {
+            display: flex; justify-content: center; margin-bottom: 1.5rem;
+        }
+        .login-card h2 {
+            text-align: center;
+            font-size: 1.25rem; font-weight: 700;
+            margin-bottom: .5rem;
+        }
+        .login-card .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem; font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: .5rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .form-group input {
+            width: 100%;
+            padding: .75rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .form-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .btn-login {
+            width: 100%;
+            padding: .75rem;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s, transform .1s;
+            font-family: inherit;
+        }
+        .btn-login:hover { opacity: .9; }
+        .btn-login:active { transform: scale(.98); }
+        .btn-login:disabled {
+            opacity: .5; cursor: not-allowed;
+        }
+        .login-error {
+            background: var(--red-bg);
+            color: var(--red);
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .login-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .login-footer a:hover { text-decoration: underline; }
+
         /* Responsive */
         @media (max-width: 768px) {
             .stats { grid-template-columns: 1fr 1fr; }
@@ -161,18 +287,51 @@ pub fn dashboard_html() -> &'static str {
             table { font-size: .8rem; }
             tbody td, thead th { padding: .625rem 1rem; }
         }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- ========== 登录视图 ========== -->
+    <div id="login-view" class="login-wrapper">
+        <div class="login-card">
+            <div class="logo-center">
+                <div class="logo" style="width:52px;height:52px;font-size:1.5rem;border-radius:14px;">R</div>
+            </div>
+            <h2>服务注册中心</h2>
+            <p class="subtitle">请登录以访问仪表板</p>
+            <div class="login-error" id="login-error"></div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" placeholder="请输入密码" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn-login" id="btn-login">登 录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== 仪表板视图 ========== -->
+    <div id="dashboard-view" class="container hidden">
         <div class="header">
             <div class="header-left">
                 <div class="logo">R</div>
                 <h1>服务注册中心<span>Dashboard</span></h1>
             </div>
-            <div class="refresh-info">
-                <div class="pulse-dot"></div>
-                <span>每 5 秒自动刷新 · 更新于 <span id="update-time">--:--:--</span></span>
+            <div class="header-right">
+                <div class="refresh-info">
+                    <div class="pulse-dot"></div>
+                    <span>每 5 秒自动刷新 · 更新于 <span id="update-time">--:--:--</span></span>
+                </div>
+                <div class="user-badge">
+                    <span class="avatar" id="user-avatar">A</span>
+                    <span id="user-display">admin</span>
+                </div>
+                <button class="btn-logout" onclick="logout()">退出</button>
             </div>
         </div>
 
@@ -209,6 +368,83 @@ pub fn dashboard_html() -> &'static str {
     </div>
 
     <script>
+        // ===== Token 管理 =====
+        function getToken() { return localStorage.getItem('registry_token'); }
+        function setToken(token) { localStorage.setItem('registry_token', token); }
+        function clearToken() { localStorage.removeItem('registry_token'); localStorage.removeItem('registry_user'); }
+        function getUser() { return localStorage.getItem('registry_user') || ''; }
+        function setUser(name) { localStorage.setItem('registry_user', name); }
+
+        // ===== 视图切换 =====
+        function showLogin() {
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        }
+        function showDashboard() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            const user = getUser();
+            document.getElementById('user-display').textContent = user;
+            document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
+            refresh();
+            refreshTimer = setInterval(refresh, 5000);
+        }
+
+        let refreshTimer = null;
+
+        // ===== 登录 =====
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login');
+            const errEl = document.getElementById('login-error');
+            errEl.style.display = 'none';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                errEl.textContent = '请填写用户名和密码';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '登录中…';
+
+            try {
+                const resp = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const json = await resp.json();
+
+                if (resp.ok && json.success) {
+                    setToken(json.data.token);
+                    setUser(username);
+                    showDashboard();
+                    scheduleTokenRefresh();
+                } else {
+                    errEl.textContent = json.message || '登录失败';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = '网络错误，请稍后重试';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登 录';
+            }
+        });
+
+        // ===== 退出 =====
+        function logout() {
+            clearToken();
+            showLogin();
+        }
+
+        // ===== 数据刷新 =====
         function formatTime(isoStr) {
             const d = new Date(isoStr);
             return d.toLocaleString('zh-CN', { hour12: false });
@@ -222,8 +458,20 @@ pub fn dashboard_html() -> &'static str {
         }
 
         async function refresh() {
+            const token = getToken();
+            if (!token) { showLogin(); return; }
+
             try {
-                const resp = await fetch('/api/v1/registry/instances');
+                const resp = await fetch('/api/v1/registry/instances', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (resp.status === 401) {
+                    clearToken();
+                    showLogin();
+                    return;
+                }
+
                 const json = await resp.json();
                 const instances = json.data || [];
 
@@ -275,8 +523,61 @@ pub fn dashboard_html() -> &'static str {
             }
         }
 
-        refresh();
-        setInterval(refresh, 5000);
+        // ===== Token 自动续期 =====
+        let refreshTimer = null;
+
+        function parseTokenExpiry(token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return payload.exp ? payload.exp * 1000 : 0; // 转为毫秒
+            } catch { return 0; }
+        }
+
+        function scheduleTokenRefresh() {
+            if (refreshTimer) clearTimeout(refreshTimer);
+            const token = getToken();
+            if (!token) return;
+
+            const expiry = parseTokenExpiry(token);
+            if (!expiry) return;
+
+            // 在过期前 5 分钟刷新
+            const delay = Math.max(expiry - Date.now() - 5 * 60 * 1000, 10000);
+            refreshTimer = setTimeout(async () => {
+                const currentToken = getToken();
+                if (!currentToken) return;
+                try {
+                    const resp = await fetch('/api/v1/auth/refresh', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + currentToken }
+                    });
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        if (json.success && json.data && json.data.token) {
+                            setToken(json.data.token);
+                            scheduleTokenRefresh(); // 安排下次续期
+                            console.log('Token 已自动续期');
+                        }
+                    } else {
+                        console.warn('Token 续期失败，需重新登录');
+                        clearToken();
+                        showLogin();
+                    }
+                } catch (e) {
+                    console.error('Token 续期异常:', e);
+                }
+            }, delay);
+        }
+
+        // ===== 初始化 =====
+        (function init() {
+            if (getToken()) {
+                showDashboard();
+                scheduleTokenRefresh();
+            } else {
+                showLogin();
+            }
+        })();
     </script>
 </body>
 </html>"#

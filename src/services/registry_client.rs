@@ -1,6 +1,7 @@
 //! 注册中心客户端
 //!
 //! 负责向远程注册中心注册当前服务并定时发送心跳
+//! 支持用户名/密码自动登录获取 JWT Token
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -20,6 +21,19 @@ struct RegisterPayload {
 #[derive(Debug, Serialize)]
 struct HeartbeatPayload {
     instance_id: String,
+}
+
+/// 登录请求体
+#[derive(Debug, Serialize)]
+struct LoginPayload {
+    username: String,
+    password: String,
+}
+
+/// 登录响应 data
+#[derive(Debug, Deserialize)]
+struct LoginResponseData {
+    token: String,
 }
 
 /// 注册响应中的 data 字段
@@ -53,8 +67,12 @@ pub struct RegistryClient {
     heartbeat_interval_secs: u64,
     /// 已注册的实例 ID
     instance_id: Arc<RwLock<Option<String>>>,
-    /// API Key（用于请求认证）
-    api_key: String,
+    /// 注册中心登录用户名
+    username: String,
+    /// 注册中心登录密码
+    password: String,
+    /// 缓存的 JWT Token
+    token: Arc<RwLock<Option<String>>>,
 }
 
 impl RegistryClient {
@@ -65,7 +83,8 @@ impl RegistryClient {
         host: String,
         port: u16,
         heartbeat_interval_secs: u64,
-        api_key: String,
+        username: String,
+        password: String,
     ) -> Self {
         Self {
             registry_url,
@@ -74,12 +93,64 @@ impl RegistryClient {
             port,
             heartbeat_interval_secs,
             instance_id: Arc::new(RwLock::new(None)),
-            api_key,
+            username,
+            password,
+            token: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// 登录到注册中心获取 JWT Token
+    async fn login(&self) -> anyhow::Result<String> {
+        let url = format!("{}/api/v1/auth/login", self.registry_url);
+        let payload = LoginPayload {
+            username: self.username.clone(),
+            password: self.password.clone(),
+        };
+
+        let client = awc::Client::new();
+        let mut resp = client
+            .post(&url)
+            .send_json(&payload)
+            .await
+            .map_err(|e| anyhow::anyhow!("发送登录请求失败: {}", e))?;
+
+        let body = resp
+            .json::<ApiResp<LoginResponseData>>()
+            .await
+            .map_err(|e| anyhow::anyhow!("解析登录响应失败: {}", e))?;
+
+        if body.success {
+            if let Some(data) = body.data {
+                let mut token = self.token.write().await;
+                *token = Some(data.token.clone());
+                log::info!("登录注册中心成功");
+                return Ok(data.token);
+            }
+        }
+
+        anyhow::bail!("登录注册中心失败: {}", body.message)
+    }
+
+    /// 获取当前缓存的 Token，如果没有则自动登录
+    async fn get_token(&self) -> anyhow::Result<String> {
+        {
+            let token = self.token.read().await;
+            if let Some(t) = token.as_ref() {
+                return Ok(t.clone());
+            }
+        }
+        self.login().await
+    }
+
+    /// 清除缓存的 Token（用于 Token 过期后重新登录）
+    async fn clear_token(&self) {
+        let mut token = self.token.write().await;
+        *token = None;
     }
 
     /// 向注册中心注册当前服务
     pub async fn register(&self) -> anyhow::Result<String> {
+        let token = self.get_token().await?;
         let url = format!("{}/api/v1/registry/register", self.registry_url);
         let payload = RegisterPayload {
             service_name: self.service_name.clone(),
@@ -91,10 +162,39 @@ impl RegistryClient {
         let client = awc::Client::new();
         let mut resp = client
             .post(&url)
-            .insert_header(("X-API-Key", self.api_key.as_str()))
+            .insert_header(("Authorization", format!("Bearer {}", token)))
             .send_json(&payload)
             .await
             .map_err(|e| anyhow::anyhow!("发送注册请求失败: {}", e))?;
+
+        // Token 过期则重新登录重试
+        if resp.status().as_u16() == 401 {
+            log::warn!("Token 已过期，重新登录");
+            self.clear_token().await;
+            let new_token = self.login().await?;
+            let mut resp = client
+                .post(&url)
+                .insert_header(("Authorization", format!("Bearer {}", new_token)))
+                .send_json(&payload)
+                .await
+                .map_err(|e| anyhow::anyhow!("重试注册请求失败: {}", e))?;
+
+            let body = resp
+                .json::<ApiResp<RegisterResponseData>>()
+                .await
+                .map_err(|e| anyhow::anyhow!("解析注册响应失败: {}", e))?;
+
+            if body.success {
+                if let Some(data) = body.data {
+                    let id = data.instance_id;
+                    let mut instance_id = self.instance_id.write().await;
+                    *instance_id = Some(id.clone());
+                    log::info!("注册成功: instance_id={}", id);
+                    return Ok(id);
+                }
+            }
+            anyhow::bail!("注册失败: {}", body.message);
+        }
 
         let body = resp
             .json::<ApiResp<RegisterResponseData>>()
@@ -123,16 +223,41 @@ impl RegistryClient {
         };
         drop(instance_id);
 
+        let token = self.get_token().await?;
         let url = format!("{}/api/v1/registry/heartbeat", self.registry_url);
         let payload = HeartbeatPayload { instance_id: id };
 
         let client = awc::Client::new();
         let mut resp = client
             .post(&url)
-            .insert_header(("X-API-Key", self.api_key.as_str()))
+            .insert_header(("Authorization", format!("Bearer {}", token)))
             .send_json(&payload)
             .await
             .map_err(|e| anyhow::anyhow!("发送心跳请求失败: {}", e))?;
+
+        // Token 过期则重新登录重试
+        if resp.status().as_u16() == 401 {
+            log::warn!("Token 已过期，重新登录");
+            self.clear_token().await;
+            let new_token = self.login().await?;
+            let mut resp = client
+                .post(&url)
+                .insert_header(("Authorization", format!("Bearer {}", new_token)))
+                .send_json(&payload)
+                .await
+                .map_err(|e| anyhow::anyhow!("重试心跳请求失败: {}", e))?;
+
+            let body = resp
+                .json::<ApiResp<serde_json::Value>>()
+                .await
+                .map_err(|e| anyhow::anyhow!("解析心跳响应失败: {}", e))?;
+
+            if body.success {
+                log::debug!("心跳发送成功");
+                return Ok(());
+            }
+            anyhow::bail!("心跳失败: {}", body.message);
+        }
 
         let body = resp
             .json::<ApiResp<serde_json::Value>>()
@@ -157,12 +282,13 @@ impl RegistryClient {
         };
         drop(instance_id);
 
+        let token = self.get_token().await?;
         let url = format!("{}/api/v1/registry/deregister/{}", self.registry_url, id);
 
         let client = awc::Client::new();
         let mut resp = client
             .delete(&url)
-            .insert_header(("X-API-Key", self.api_key.as_str()))
+            .insert_header(("Authorization", format!("Bearer {}", token)))
             .send()
             .await
             .map_err(|e| anyhow::anyhow!("发送注销请求失败: {}", e))?;
@@ -182,7 +308,7 @@ impl RegistryClient {
 
     /// 启动后台心跳定时任务
     ///
-    /// 首先注册到注册中心，然后每隔 `heartbeat_interval_secs` 秒发送一次心跳。
+    /// 首先登录并注册到注册中心，然后每隔 `heartbeat_interval_secs` 秒发送一次心跳。
     /// 如果注册失败，会每隔 5 秒重试。
     pub fn start_heartbeat_task(self) {
         actix_web::rt::spawn(async move {

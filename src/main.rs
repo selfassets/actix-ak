@@ -69,7 +69,8 @@ async fn main() -> std::io::Result<()> {
             register_host,
             config.server.port,
             config.registry.heartbeat_interval_secs,
-            config.api.api_key.clone(),
+            config.registry.registry_username.clone(),
+            config.registry.registry_password.clone(),
         );
         client.start_heartbeat_task();
     }
