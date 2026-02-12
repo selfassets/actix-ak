@@ -51,6 +51,7 @@ ENV REGISTER_HOST=""
 ENV REGISTRY_USERNAME=""
 ENV REGISTRY_PASSWORD=""
 
+
 EXPOSE 8080
 
 # 支持通过挂载覆盖配置文件: -v /path/to/config.json:/app/config.json
