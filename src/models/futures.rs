@@ -110,6 +110,8 @@ pub struct FuturesExchange {
 pub struct FuturesSymbolMark {
     /// 交易所名称（中文）
     pub exchange: String,
+    /// 交易所代码（如 czce, shfe 等）
+    pub exchange_code: String,
     /// 品种名称（如 PTA、铜）
     pub symbol: String,
     /// 新浪 API 的 node 参数（如 pta_qh、tong_qh）

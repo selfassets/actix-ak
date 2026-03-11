@@ -135,6 +135,7 @@ impl FuturesService {
                         if !symbol_name.is_empty() && !mark.is_empty() && mark.ends_with("_qh") {
                             symbols.push(FuturesSymbolMark {
                                 exchange: exchange_name.to_string(),
+                                exchange_code: exchange_code.to_string(),
                                 symbol: symbol_name.to_string(),
                                 mark: mark.to_string(),
                             });
