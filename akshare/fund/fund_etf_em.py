@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-Date: 2025/2/15 22:00
+Date: 2025/4/27 00:00
 Desc: 东方财富-ETF行情
 https://quote.eastmoney.com/sh513500.html
 """
@@ -48,7 +48,7 @@ def fund_etf_spot_em() -> pd.DataFrame:
     :return: ETF 实时行情
     :rtype: pandas.DataFrame
     """
-    url = "https://88.push2.eastmoney.com/api/qt/clist/get"
+    url = "https://push2delay.eastmoney.com/api/qt/clist/get"
     params = {
         "pn": "1",
         "pz": "100",
@@ -216,21 +216,23 @@ def fund_etf_spot_em() -> pd.DataFrame:
     )
     return temp_df
 
-def get_market_id(symbol: str)-> int:
+
+def get_market_id(symbol: str) -> int:
     """
     东方财富-ETF市场标识判断
     :param symbol: ETF 代码
     :type symbol: str
     :return: ETF 代码和市场标识（1:上证 0:深证）
-    :rtype: int 
+    :rtype: int
     """
-    if symbol.startswith(('0', '1', '3', '2', '5', '6')):
-        if symbol.startswith(('5', '6')):
+    if symbol.startswith(("0", "1", "3", "2", "5", "6")):
+        if symbol.startswith(("5", "6")):
             return 1
         else:
             return 0
     else:
         return 1
+
 
 def fund_etf_hist_em(
     symbol: str = "159707",
@@ -338,7 +340,7 @@ def fund_etf_hist_min_em(
     :return: 每日分时行情
     :rtype: pandas.DataFrame
     """
-    #code_id_dict = _fund_etf_code_id_map_em()
+    # code_id_dict = _fund_etf_code_id_map_em()
     # 商品期货类 ETF
     # code_id_dict.update(
     #     {
@@ -489,7 +491,7 @@ if __name__ == "__main__":
         symbol="511380",
         period="1",
         adjust="",
-        start_date="2025-03-10 09:30:00",
-        end_date="2025-03-10 17:40:00",
+        start_date="2025-04-10 09:30:00",
+        end_date="2025-04-10 17:40:00",
     )
     print(fund_etf_hist_min_em_df)

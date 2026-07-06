@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-Date: 2024/12/14 15:00
+Date: 2026/1/20 17:00
 Desc: 东方财富网站-天天基金网-基金数据-开放式基金净值
 https://fund.eastmoney.com/manager/default.html#dt14;mcreturnjson;ftall;pn20;pi1;scabbname;stasc
 1.基金经理基本数据, 建议包含:基金经理代码,基金经理姓名,从业起始日期,现任基金公司,管理资产总规模,上述数据可在"基金经理列表:
@@ -411,6 +411,62 @@ def fund_open_fund_info_em(
         temp_df["累计净值"] = pd.to_numeric(temp_df["累计净值"], errors="coerce")
         return temp_df
 
+    # 每万份收益
+    if indicator == "每万份收益":
+        data_json = js_code.execute("Data_millionCopiesIncome")
+        temp_df = pd.DataFrame(data_json)
+        if temp_df.empty:
+            return pd.DataFrame()
+        temp_df.columns = ["x", "y"]
+        temp_df["x"] = pd.to_datetime(temp_df["x"], unit="ms", utc=True).dt.tz_convert(
+            "Asia/Shanghai"
+        )
+        temp_df["x"] = temp_df["x"].dt.date
+        temp_df.columns = [
+            "净值日期",
+            "每万份收益",
+        ]
+        temp_df = temp_df[
+            [
+                "净值日期",
+                "每万份收益",
+            ]
+        ]
+        temp_df["净值日期"] = pd.to_datetime(
+            temp_df["净值日期"], errors="coerce"
+        ).dt.date
+        temp_df["每万份收益"] = pd.to_numeric(temp_df["每万份收益"], errors="coerce")
+        return temp_df
+
+    # 7日年化收益率
+    if indicator == "7日年化收益率":
+        data_json = js_code.execute("Data_sevenDaysYearIncome")
+        temp_df = pd.DataFrame(data_json)
+        if temp_df.empty:
+            return pd.DataFrame()
+        temp_df.columns = ["x", "y"]
+        temp_df["x"] = pd.to_datetime(temp_df["x"], unit="ms", utc=True).dt.tz_convert(
+            "Asia/Shanghai"
+        )
+        temp_df["x"] = temp_df["x"].dt.date
+        temp_df.columns = [
+            "净值日期",
+            "7日年化收益率",
+        ]
+        temp_df = temp_df[
+            [
+                "净值日期",
+                "7日年化收益率",
+            ]
+        ]
+        temp_df["净值日期"] = pd.to_datetime(
+            temp_df["净值日期"], errors="coerce"
+        ).dt.date
+        temp_df["7日年化收益率"] = pd.to_numeric(
+            temp_df["7日年化收益率"], errors="coerce"
+        )
+        return temp_df
+
     # 累计收益率走势
     if indicator == "累计收益率走势":
         url = "https://api.fund.eastmoney.com/pinzhong/LJSYLZS"
@@ -705,13 +761,7 @@ def fund_financial_fund_info_em(symbol: str = "000134") -> pd.DataFrame:
     :rtype: pandas.DataFrame
     """
     url = "https://api.fund.eastmoney.com/f10/lsjz"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/80.0.3987.149 Safari/537.36",
-        "Referer": f"https://fundf10.eastmoney.com/jjjz_{symbol}.html",
-    }
     params = {
-        "callback": "jQuery18307915911837995662_1588249228826",
         "fundCode": symbol,
         "pageIndex": "1",
         "pageSize": "10000",
@@ -719,9 +769,8 @@ def fund_financial_fund_info_em(symbol: str = "000134") -> pd.DataFrame:
         "endDate": "",
         "_": round(time.time() * 1000),
     }
-    r = requests.get(url, params=params, headers=headers)
-    text_data = r.text
-    data_json = demjson.decode(text_data[text_data.find("{") : -1])
+    r = requests.get(url, params=params)
+    data_json = r.json()
     temp_df = pd.DataFrame(data_json["Data"]["LSJZList"])
     temp_df.columns = [
         "净值日期",
@@ -750,7 +799,7 @@ def fund_financial_fund_info_em(symbol: str = "000134") -> pd.DataFrame:
         ]
     ]
     temp_df.sort_values(["净值日期"], inplace=True, ignore_index=True)
-    temp_df["净值日期"] = pd.to_datetime(temp_df["净值日期"]).dt.date
+    temp_df["净值日期"] = pd.to_datetime(temp_df["净值日期"], errors="coerce").dt.date
     temp_df["单位净值"] = pd.to_numeric(temp_df["单位净值"], errors="coerce")
     temp_df["累计净值"] = pd.to_numeric(temp_df["累计净值"], errors="coerce")
     temp_df["日增长率"] = pd.to_numeric(temp_df["日增长率"], errors="coerce")
@@ -807,6 +856,7 @@ def fund_graded_fund_daily_em() -> pd.DataFrame:
         "-",
         "-",
         "手续费",
+        "-",
     ]
     data_df = temp_df[
         [
@@ -902,7 +952,7 @@ def fund_etf_fund_daily_em() -> pd.DataFrame:
     temp_df_columns = temp_df.iloc[0, :].tolist()[1:]
     temp_df = temp_df.iloc[1:, 1:]
     temp_df.columns = temp_df_columns
-    temp_df["基金简称"] = temp_df["基金简称"].str.replace("行情吧档案", '')
+    temp_df["基金简称"] = temp_df["基金简称"].str.replace("行情吧档案", "")
     temp_df.reset_index(inplace=True, drop=True)
     temp_df.columns = [
         "基金代码",
@@ -1156,6 +1206,7 @@ def fund_hk_fund_hist_em(
             "分红发放日",
             "_",
             "单位",
+            "_",
             "_",
             "_",
         ]
