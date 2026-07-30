@@ -1,12 +1,21 @@
 /* 自定义 mdbook 样式：扩大主体内容区域的最大宽度，减少左右空白 */
 :root {
-    --content-max-width: 90%;
+    /* 将默认的 750px 限制调整为 1200px (也可根据需求设置为 90%/95%) */
+    --content-max-width: 1200px;
 }
 
 .page-wrapper .page {
-    max-width: var(--content-max-width);
+    max-width: var(--content-max-width) !important;
 }
 
 .content main {
-    max-width: var(--content-max-width);
+    max-width: var(--content-max-width) !important;
+    padding: 0 15px !important;
 }
+
+/* 减少页面两侧的外边距/内边距 */
+.page {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+}
+
