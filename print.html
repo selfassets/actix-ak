@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d146a137.js";
+            window.path_to_searchindex_js = "searchindex-5860cc43.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b4b5a846.js"></script>
@@ -314,6 +314,118 @@
       "month": 2,
       "epu": 115.3,
       "SCMP_China_EPU": 115.3
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<hr>
+<h2 id="3-美联储-fred-md-月度-宏观经济数据"><a class="header" href="#3-美联储-fred-md-月度-宏观经济数据">3. 美联储 FRED-MD (月度) 宏观经济数据</a></h2>
+<p>获取美联储圣路易斯分行 (Federal Reserve Bank of St. Louis) 的 FRED-MD 月度宏观经济数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/fred_md</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-2"><a class="header" href="#请求参数-2">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"2020-01"</code></td><td style="text-align: left">年月字符串，如 <code>"2020-03"</code>, <code>"2023-01"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="4-美联储-fred-qd-季度-宏观经济数据"><a class="header" href="#4-美联储-fred-qd-季度-宏观经济数据">4. 美联储 FRED-QD (季度) 宏观经济数据</a></h2>
+<p>获取美联储圣路易斯分行的 FRED-QD 季度宏观经济数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/fred_qd</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-3"><a class="header" href="#请求参数-3">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"2020-01"</code></td><td style="text-align: left">年月字符串，如 <code>"2020-03"</code>, <code>"2023-01"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="5-oxford-man-研究所-realized-volatility-数据"><a class="header" href="#5-oxford-man-研究所-realized-volatility-数据">5. Oxford-Man 研究所 Realized Volatility 数据</a></h2>
+<p>获取 Oxford-Man 研究所金融资产/指数的实际波动率序列数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_oman_rv</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-4"><a class="header" href="#请求参数-4">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"FTSE"</code></td><td style="text-align: left">指数/资产代码，如 <code>"FTSE"</code>, <code>"SPX"</code>, <code>"SSEC"</code> 等</td></tr>
+<tr><td style="text-align: left"><code>index</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"rk_th2"</code></td><td style="text-align: left">波动率计算指标类型，如 <code>"rk_th2"</code>, <code>"rv5"</code>, <code>"rv10"</code> 等</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="6-oxford-man-研究所-realized-volatility-简易数据"><a class="header" href="#6-oxford-man-研究所-realized-volatility-简易数据">6. Oxford-Man 研究所 Realized Volatility 简易数据</a></h2>
+<p>获取 Oxford-Man 研究所首页的实际波动率简化折线数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_oman_rv_short</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-5"><a class="header" href="#请求参数-5">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"FTSE"</code></td><td style="text-align: left">指数/资产代码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="7-修大成-risk-lab-realized-volatility-数据"><a class="header" href="#7-修大成-risk-lab-realized-volatility-数据">7. 修大成 Risk Lab Realized Volatility 数据</a></h2>
+<p>获取芝加哥大学修大成教授团队 Risk Lab 的资产实际波动率数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_rlab_rv</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-6"><a class="header" href="#请求参数-6">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"39693"</code></td><td style="text-align: left">股票/品种 Ticker 代号</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="响应示例-2"><a class="header" href="#响应示例-2">响应示例</a></h3>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "date": "1996-01-02",
+      "value": 0.1234
+    },
+    {
+      "date": "1996-01-04",
+      "value": 0.5678
     }
   ],
   "error": null
