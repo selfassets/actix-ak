@@ -1,0 +1,21 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 股票接口
+### ============================================================
+
+### 获取股票列表
+GET {{baseUrl}}/stocks?limit=20
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取单只股票信息
+GET {{baseUrl}}/stocks/600000
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取股票历史K线数据
+GET {{baseUrl}}/stocks/600000/history?limit=30
+Authorization: Bearer {{token}}
+Content-Type: application/json

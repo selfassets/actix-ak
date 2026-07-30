@@ -1,86 +1,5 @@
-### ============================================================
-### AkShare Backend API 测试文件
-### 参考 akshare 实现的期货和股票数据接口
-### ============================================================
-
 @baseUrl = http://0.0.0.0:8080/api/v1
 @token = 12345678
-
-### ============================================================
-### 健康检查（无需认证）
-### ============================================================
-
-### 健康检查 - 检测服务是否正常运行
-GET {{baseUrl}}/health
-Content-Type: application/json
-
-### ============================================================
-### AkShare 模块接口
-### ============================================================
-
-### 获取 AK 模块信息与数据分类
-GET {{baseUrl}}/ak/info
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取经济政策不确定性指数（EPU Index） - 默认 (China)
-GET {{baseUrl}}/ak/article_epu_index?symbol=China
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取经济政策不确定性指数（EPU Index） - 美国 (USA)
-GET {{baseUrl}}/ak/article_epu_index?symbol=USA
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取美联储 FRED-MD (月度) 宏观经济数据
-GET {{baseUrl}}/ak/fred_md?date=2023-03
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取美联储 FRED-QD (季度) 宏观经济数据
-GET {{baseUrl}}/ak/fred_qd?date=2023-03
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取 Oxford-Man 实际波动率数据
-GET {{baseUrl}}/ak/article_oman_rv?symbol=FTSE&index=rk_th2
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取 Oxford-Man 实际波动率简易数据
-GET {{baseUrl}}/ak/article_oman_rv_short?symbol=FTSE
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取 Risk Lab 实际波动率数据
-GET {{baseUrl}}/ak/article_rlab_rv?symbol=39693
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### ============================================================
-### 银行与金融监管接口
-### ============================================================
-
-### 获取行政处罚总条数
-GET {{baseUrl}}/ak/bank/fjcf_total_num?item=机关
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取行政处罚总页数
-GET {{baseUrl}}/ak/bank/fjcf_total_page?item=机关&begin=1
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取行政处罚列表概要
-GET {{baseUrl}}/ak/bank/fjcf_list?page=1&item=机关&begin=1
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取行政处罚信息公开表详情
-GET {{baseUrl}}/ak/bank/fjcf_detail?page=1&item=机关&begin=1
-Authorization: Bearer {{token}}
-Content-Type: application/json
 
 ### ============================================================
 ### 期货 - 交易所和品种信息
@@ -428,24 +347,5 @@ Content-Type: application/json
 
 ### 获取广期所仓单日报
 GET {{baseUrl}}/futures/warehouse/gfex?date=20240102
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### ============================================================
-### 股票接口
-### ============================================================
-
-### 获取股票列表
-GET {{baseUrl}}/stocks?limit=20
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取单只股票信息
-GET {{baseUrl}}/stocks/600000
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-### 获取股票历史K线数据
-GET {{baseUrl}}/stocks/600000/history?limit=30
 Authorization: Bearer {{token}}
 Content-Type: application/json

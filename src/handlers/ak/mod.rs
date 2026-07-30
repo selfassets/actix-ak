@@ -2,6 +2,8 @@
 //!
 //! 提供 AK 模块相关的 HTTP 端点
 
+pub mod bank;
+
 use crate::models::{
     ak::EpuIndexQuery, ak::FredQuery, ak::OmanRvQuery, ak::OmanRvShortQuery, ak::RlabRvQuery,
     ApiResponse,
@@ -198,6 +200,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                 "/article_oman_rv_short",
                 web::get().to(get_article_oman_rv_short),
             )
-            .route("/article_rlab_rv", web::get().to(get_article_rlab_rv)),
+            .route("/article_rlab_rv", web::get().to(get_article_rlab_rv))
+            .configure(bank::config),
     );
 }

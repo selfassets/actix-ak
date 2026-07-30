@@ -24,7 +24,8 @@ cargo run --features swagger
 ## 目录
 
 - [健康检查](health)
-- [AK 模块接口](ak)
+- [AK 模块接口](ak/index.md)
+  - [银行监管接口](ak/bank.md)
 - [期货接口](futures)
 - [股票接口](stocks)
 - [注册中心](registry)

@@ -1,0 +1,26 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 银行与金融监管接口
+### ============================================================
+
+### 获取行政处罚总条数
+GET {{baseUrl}}/ak/bank/fjcf_total_num?item=机关
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取行政处罚总页数
+GET {{baseUrl}}/ak/bank/fjcf_total_page?item=机关&begin=1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取行政处罚列表概要
+GET {{baseUrl}}/ak/bank/fjcf_list?page=1&item=机关&begin=1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取行政处罚信息公开表详情
+GET {{baseUrl}}/ak/bank/fjcf_detail?page=1&item=机关&begin=1
+Authorization: Bearer {{token}}
+Content-Type: application/json

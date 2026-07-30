@@ -26,6 +26,7 @@ use utoipa::OpenApi;
     tags(
         (name = "health", description = "健康检查接口"),
         (name = "ak", description = "AkShare 模块接口"),
+        (name = "bank", description = "银保监会/金融监管数据接口"),
         (name = "stocks", description = "股票数据接口"),
         (name = "futures", description = "期货数据接口"),
         (name = "futures-main", description = "主力连续合约接口"),
@@ -43,6 +44,11 @@ use utoipa::OpenApi;
         crate::handlers::ak::get_article_oman_rv,
         crate::handlers::ak::get_article_oman_rv_short,
         crate::handlers::ak::get_article_rlab_rv,
+        // 银行/金融监管接口
+        crate::handlers::ak::bank::get_fjcf_total_num,
+        crate::handlers::ak::bank::get_fjcf_total_page,
+        crate::handlers::ak::bank::get_fjcf_list,
+        crate::handlers::ak::bank::get_fjcf_detail,
         // 股票接口
         crate::handlers::stock::list_stocks,
         crate::handlers::stock::get_stock_info,
@@ -85,6 +91,9 @@ use utoipa::OpenApi;
             crate::models::OmanRvQuery,
             crate::models::OmanRvShortQuery,
             crate::models::RlabRvQuery,
+            crate::models::ak::bank::BankFjcfQuery,
+            crate::models::ak::bank::BankFjcfListItem,
+            crate::models::ak::bank::BankFjcfDetailItem,
             crate::models::StockInfo,
             crate::models::StockQuery,
             crate::models::StockHistoryData,

@@ -2,6 +2,8 @@
 //!
 //! 定义 AK 模块相关的请求和响应结构
 
+pub mod bank;
+
 use serde::{Deserialize, Serialize};
 
 /// AK 接口元数据信息
