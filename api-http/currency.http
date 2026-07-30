@@ -14,3 +14,8 @@ Content-Type: application/json
 GET {{baseUrl}}/ak/currency/boc_sina?symbol=欧元&start_date=20230101&end_date=20230601
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+### 国家外汇管理局 (SAFE) 人民币汇率中间价
+GET {{baseUrl}}/ak/currency/boc_safe?start_date=2023-01-01
+Authorization: Bearer {{token}}
+Content-Type: application/json

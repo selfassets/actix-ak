@@ -32,6 +32,7 @@ use utoipa::OpenApi;
         (name = "cal", description = "波动率估算与算法接口"),
         (name = "interest_rate", description = "银行间拆借利率接口"),
         (name = "crypto", description = "加密货币行情与持仓接口"),
+        (name = "macro", description = "宏观经济数据接口"),
         (name = "stocks", description = "股票数据接口"),
         (name = "futures", description = "期货数据接口"),
         (name = "futures-main", description = "主力连续合约接口"),
@@ -90,6 +91,7 @@ use utoipa::OpenApi;
         crate::handlers::ak::bond::get_bond_china_close_return,
         // 外汇与货币接口
         crate::handlers::ak::currency::get_currency_boc_sina,
+        crate::handlers::ak::currency::get_currency_boc_safe,
         // 量化计算接口
         crate::handlers::ak::cal::calculate_volatility_yz,
         crate::handlers::ak::cal::get_rv_stock_em,
@@ -99,6 +101,18 @@ use utoipa::OpenApi;
         // 加密货币接口
         crate::handlers::ak::crypto::get_crypto_bitcoin_cme,
         crate::handlers::ak::crypto::get_crypto_bitcoin_hold_report,
+        // 宏观经济接口
+        crate::handlers::ak::macro_data::get_macro_china_gdp,
+        crate::handlers::ak::macro_data::get_macro_china_cpi,
+        crate::handlers::ak::macro_data::get_macro_china_ppi,
+        crate::handlers::ak::macro_data::get_macro_china_pmi,
+        crate::handlers::ak::macro_data::get_macro_china_shrzgm,
+        crate::handlers::ak::macro_data::get_macro_china_m2,
+        crate::handlers::ak::macro_data::get_macro_china_lpr,
+        crate::handlers::ak::macro_data::get_macro_usa_non_farm,
+        crate::handlers::ak::macro_data::get_macro_usa_unemployment,
+        crate::handlers::ak::macro_data::get_macro_usa_cpi,
+        crate::handlers::ak::macro_data::get_macro_usa_gdp,
         // 股票接口
         crate::handlers::stock::list_stocks,
         crate::handlers::stock::get_stock_info,
@@ -172,6 +186,7 @@ use utoipa::OpenApi;
             crate::models::ak::bond::BondChinaCloseReturnItem,
             crate::models::ak::currency::CurrencyBocQuery,
             crate::models::ak::currency::CurrencyBocItem,
+            crate::models::ak::currency::CurrencySafeItem,
             crate::models::ak::cal::OhlcItem,
             crate::models::ak::cal::YangZhangVolatilityResult,
             crate::models::ak::cal::RvMinuteQuery,
@@ -180,6 +195,8 @@ use utoipa::OpenApi;
             crate::models::ak::crypto::CryptoQuery,
             crate::models::ak::crypto::CryptoBitcoinCmeItem,
             crate::models::ak::crypto::CryptoBitcoinHoldItem,
+            crate::models::ak::macro_data::MacroQuery,
+            crate::models::ak::macro_data::MacroItem,
             crate::models::StockInfo,
             crate::models::StockQuery,
             crate::models::StockHistoryData,

@@ -35,3 +35,12 @@ pub struct CurrencyBocItem {
     /// 发布时间
     pub publish_time: Option<String>,
 }
+
+/// 国家外汇管理局 (SAFE) 人民币汇率中间价条目
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema))]
+pub struct CurrencySafeItem {
+    /// 动态包含 SAFE 各种货币的中间价
+    #[serde(flatten)]
+    pub data: std::collections::HashMap<String, serde_json::Value>,
+}

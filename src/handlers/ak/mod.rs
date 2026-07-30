@@ -8,6 +8,7 @@ pub mod cal;
 pub mod crypto;
 pub mod currency;
 pub mod interest_rate;
+pub mod macro_data;
 
 use crate::models::{
     ak::EpuIndexQuery, ak::FredQuery, ak::OmanRvQuery, ak::OmanRvShortQuery, ak::RlabRvQuery,
@@ -211,6 +212,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .configure(currency::config)
             .configure(cal::config)
             .configure(interest_rate::config)
-            .configure(crypto::config),
+            .configure(crypto::config)
+            .configure(macro_data::config),
     );
 }

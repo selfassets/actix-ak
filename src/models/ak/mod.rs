@@ -8,6 +8,7 @@ pub mod cal;
 pub mod crypto;
 pub mod currency;
 pub mod interest_rate;
+pub mod macro_data;
 
 use serde::{Deserialize, Serialize};
 

@@ -1,0 +1,61 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 宏观经济接口
+### ============================================================
+
+### 中国 GDP 增长数据
+GET {{baseUrl}}/ak/macro/china_gdp
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国 CPI 数据
+GET {{baseUrl}}/ak/macro/china_cpi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国 PPI 数据
+GET {{baseUrl}}/ak/macro/china_ppi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国 PMI 数据
+GET {{baseUrl}}/ak/macro/china_pmi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国社会融资规模
+GET {{baseUrl}}/ak/macro/china_shrzgm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国 M2 货币供应量
+GET {{baseUrl}}/ak/macro/china_m2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国 LPR 利率历史
+GET {{baseUrl}}/ak/macro/china_lpr
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国非农就业人口变动
+GET {{baseUrl}}/ak/macro/usa_non_farm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国失业率
+GET {{baseUrl}}/ak/macro/usa_unemployment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国 CPI 数据
+GET {{baseUrl}}/ak/macro/usa_cpi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国 GDP 数据
+GET {{baseUrl}}/ak/macro/usa_gdp
+Authorization: Bearer {{token}}
+Content-Type: application/json

@@ -8,6 +8,7 @@ pub mod cal;
 pub mod crypto;
 pub mod currency;
 pub mod interest_rate;
+pub mod macro_data;
 
 use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};
 use calamine::{DataType, Reader, Xlsx};
