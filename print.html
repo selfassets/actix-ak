@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4740dbea.js";
+            window.path_to_searchindex_js = "searchindex-6d3fe65c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-3416b8fb.js"></script>
+        <script src="toc-51285d98.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -625,6 +625,360 @@
 <li><strong>Method</strong>: <code>GET</code></li>
 <li><strong>Auth</strong>: 需要 Bearer Token</li>
 </ul>
+<hr>
+<h2 id="11-沪深债券实时行情数据新浪源"><a class="header" href="#11-沪深债券实时行情数据新浪源">11. 沪深债券实时行情数据（新浪源）</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/zh_hs_spot</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="12-质押式国债逆回购历史-k-线行情东方财富"><a class="header" href="#12-质押式国债逆回购历史-k-线行情东方财富">12. 质押式国债逆回购历史 K 线行情（东方财富）</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/buy_back_hist</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-3-2"><a class="header" href="#请求参数-3-2">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"204001"</code></td><td style="text-align: left">质押式国债逆回购代码，如 <code>"204001"</code> (GC001), <code>"131810"</code> (R-001)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="13-中国外汇交易中心收益率曲线品种映射表"><a class="header" href="#13-中国外汇交易中心收益率曲线品种映射表">13. 中国外汇交易中心收益率曲线品种映射表</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/china_close_return_map</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="14-上交所债券现货市场概览"><a class="header" href="#14-上交所债券现货市场概览">14. 上交所债券现货市场概览</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/cash_summary_sse</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-4-1"><a class="header" href="#请求参数-4-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20210111"</code></td><td style="text-align: left">查询日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="15-上交所债券成交概览汇总"><a class="header" href="#15-上交所债券成交概览汇总">15. 上交所债券成交概览汇总</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/deal_summary_sse</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-5-1"><a class="header" href="#请求参数-5-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20210104"</code></td><td style="text-align: left">查询日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="16-同花顺可转债基本信息列表"><a class="header" href="#16-同花顺可转债基本信息列表">16. 同花顺可转债基本信息列表</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/zh_cov_info_ths</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="17-新浪财经可转债概况汇总"><a class="header" href="#17-新浪财经可转债概况汇总">17. 新浪财经可转债概况汇总</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/cb_summary_sina</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-6-1"><a class="header" href="#请求参数-6-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"sh155255"</code></td><td style="text-align: left">带市场前缀的可转债代码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="18-中国外汇交易中心现券做市报价"><a class="header" href="#18-中国外汇交易中心现券做市报价">18. 中国外汇交易中心现券做市报价</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/spot_quote</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="19-中国外汇交易中心现券成交行情"><a class="header" href="#19-中国外汇交易中心现券成交行情">19. 中国外汇交易中心现券成交行情</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/spot_deal</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="20-中国债券信息网国债及各期限收益率曲线"><a class="header" href="#20-中国债券信息网国债及各期限收益率曲线">20. 中国债券信息网国债及各期限收益率曲线</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/china_yield</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-7-1"><a class="header" href="#请求参数-7-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20200204"</code></td><td style="text-align: left">开始日期 YYYYMMDD</td></tr>
+<tr><td style="text-align: left"><code>end_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20210124"</code></td><td style="text-align: left">结束日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="21-中国货币网债券信息查询参数"><a class="header" href="#21-中国货币网债券信息查询参数">21. 中国货币网债券信息查询参数</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/info_cm_query</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-8-1"><a class="header" href="#请求参数-8-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"评级等级"</code></td><td style="text-align: left">查询指标分类：选择范围 <code>{"主承销商", "债券类型", "息票类型", "发行年份", "评级等级"}</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="22-中国货币网债券信息列表"><a class="header" href="#22-中国货币网债券信息列表">22. 中国货币网债券信息列表</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/info_cm</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-9"><a class="header" href="#请求参数-9">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>""</code></td><td style="text-align: left">债券代码进行精确或模糊匹配过滤</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="23-中国银行间市场交易商协会-nafmii-非金融企业债务融资工具注册信息"><a class="header" href="#23-中国银行间市场交易商协会-nafmii-非金融企业债务融资工具注册信息">23. 中国银行间市场交易商协会 (NAFMII) 非金融企业债务融资工具注册信息</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/debt_nafmii</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-10"><a class="header" href="#请求参数-10">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"1"</code></td><td style="text-align: left">分页页码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="24-中国货币网单只债券详情信息"><a class="header" href="#24-中国货币网单只债券详情信息">24. 中国货币网单只债券详情信息</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/info_detail_cm</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-11"><a class="header" href="#请求参数-11">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"egfjh08154"</code></td><td style="text-align: left">债券定义代码 bondDefinedCode</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="25-巨潮资讯债券发行数据"><a class="header" href="#25-巨潮资讯债券发行数据">25. 巨潮资讯债券发行数据</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/issue_cninfo</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-12"><a class="header" href="#请求参数-12">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20210910"</code></td><td style="text-align: left">开始日期 YYYYMMDD</td></tr>
+<tr><td style="text-align: left"><code>end_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20211109"</code></td><td style="text-align: left">结束日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="26-东方财富可转债价值分析-溢价率分析"><a class="header" href="#26-东方财富可转债价值分析-溢价率分析">26. 东方财富可转债价值分析 (溢价率分析)</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/zh_cov_value_analysis</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-13"><a class="header" href="#请求参数-13">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"113527"</code></td><td style="text-align: left">可转债代码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="27-中国债券信息网中债国债指数"><a class="header" href="#27-中国债券信息网中债国债指数">27. 中国债券信息网中债国债指数</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/treasury_index_cbond</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-14"><a class="header" href="#请求参数-14">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"5Y"</code></td><td style="text-align: left">指数期限，选择范围 <code>{'0-1Y', '0-3Y', '0-5Y', '0-10Y', '1-3Y', '1-5Y', '1-10Y', '3-5Y', '5Y', '7Y', '7-10Y', '10Y', '30Y'}</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="28-沪深可转债历史日-k-线行情新浪源"><a class="header" href="#28-沪深可转债历史日-k-线行情新浪源">28. 沪深可转债历史日 K 线行情（新浪源）</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/zh_hs_cov_daily</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-15"><a class="header" href="#请求参数-15">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"sh010107"</code></td><td style="text-align: left">沪深可转债代码，如 <code>"sh010107"</code>, <code>"sz128039"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="29-沪深现券债券历史日-k-线行情新浪源"><a class="header" href="#29-沪深现券债券历史日-k-线行情新浪源">29. 沪深现券/债券历史日 K 线行情（新浪源）</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/zh_hs_daily</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-16"><a class="header" href="#请求参数-16">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"sh010107"</code></td><td style="text-align: left">沪深债券代码，如 <code>"sh010107"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="30-集思录可转债转股价调整日志"><a class="header" href="#30-集思录可转债转股价调整日志">30. 集思录可转债转股价调整日志</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/cb_adj_logs_jsl</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-17"><a class="header" href="#请求参数-17">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"128013"</code></td><td style="text-align: left">可转债代码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="31-中国债券信息网中债指数可选项列表"><a class="header" href="#31-中国债券信息网中债指数可选项列表">31. 中国债券信息网中债指数可选项列表</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/available_index_cbond</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<hr>
+<h2 id="32-中国债券信息网中债通用指数查询"><a class="header" href="#32-中国债券信息网中债通用指数查询">32. 中国债券信息网中债通用指数查询</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/index_general_cbond</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-18"><a class="header" href="#请求参数-18">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>index_category</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"新综合指数"</code></td><td style="text-align: left">指数分类（如 <code>"新综合指数"</code>, <code>"中债-国债指数"</code>, <code>"金融债指数"</code>）</td></tr>
+<tr><td style="text-align: left"><code>indicator</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"全价"</code></td><td style="text-align: left">指标类型（如 <code>"全价"</code>, <code>"净价"</code>, <code>"财富"</code>）</td></tr>
+<tr><td style="text-align: left"><code>period</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"总值"</code></td><td style="text-align: left">期限分段（如 <code>"总值"</code>, <code>"1年以下"</code>, <code>"1-3年"</code>, <code>"3-5年"</code>）</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="33-中国外汇交易中心收盘收益率曲线历史数据"><a class="header" href="#33-中国外汇交易中心收盘收益率曲线历史数据">33. 中国外汇交易中心收盘收益率曲线历史数据</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bond/china_close_return</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-19"><a class="header" href="#请求参数-19">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"CYCC000"</code></td><td style="text-align: left">债券收益率曲线类型代码</td></tr>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20231101"</code></td><td style="text-align: left">开始日期 YYYYMMDD</td></tr>
+<tr><td style="text-align: left"><code>end_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20231101"</code></td><td style="text-align: left">结束日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="外汇与货币数据接口"><a class="header" href="#外汇与货币数据接口">外汇与货币数据接口</a></h1>
 <p>提供中国银行人民币牌价历史数据查询。</p>
@@ -637,7 +991,7 @@
 <li><strong>Method</strong>: <code>GET</code></li>
 <li><strong>Auth</strong>: 需要 Bearer Token</li>
 </ul>
-<h3 id="请求参数-9"><a class="header" href="#请求参数-9">请求参数</a></h3>
+<h3 id="请求参数-20"><a class="header" href="#请求参数-20">请求参数</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -670,6 +1024,31 @@
   { "date": "2024-01-03", "open": 10.5, "high": 10.9, "low": 10.2, "close": 10.4 }
 ]
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="拆借利率与利率接口"><a class="header" href="#拆借利率与利率接口">拆借利率与利率接口</a></h1>
+<p>提供东方财富网各类银行间拆借利率（Shibor、Chibor、Libor、Euribor、Hibor、Sibor 等）历史数据。</p>
+<h2 id="基础路径-5"><a class="header" href="#基础路径-5">基础路径</a></h2>
+<p><code>/api/v1/ak/interest_rate</code></p>
+<hr>
+<h2 id="1-银行间同业拆借利率"><a class="header" href="#1-银行间同业拆借利率">1. 银行间同业拆借利率</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/interest_rate/rate_interbank</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-21"><a class="header" href="#请求参数-21">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>market</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"上海银行同业拆借市场"</code></td><td style="text-align: left">市场选择（如 <code>"上海银行同业拆借市场"</code>, <code>"伦敦银行同业拆借市场"</code>, <code>"香港银行同业拆借市场"</code>）</td></tr>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"Shibor人民币"</code></td><td style="text-align: left">拆借品种（如 <code>"Shibor人民币"</code>, <code>"Libor美元"</code>, <code>"Hibor港币"</code> 等）</td></tr>
+<tr><td style="text-align: left"><code>indicator</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"隔夜"</code></td><td style="text-align: left">期限（如 <code>"隔夜"</code>, <code>"1周"</code>, <code>"1月"</code>, <code>"1年"</code>）</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="期货接口"><a class="header" href="#期货接口">期货接口</a></h1>
 <p>提供国内期货和外盘期货的实时行情、历史数据、持仓排名等信息。</p>
