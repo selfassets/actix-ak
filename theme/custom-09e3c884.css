@@ -1,0 +1,38 @@
+/* 自定义 mdbook 样式：扩大主体内容区域的最大宽度，减少左右空白并防止被翻页按钮覆盖 */
+:root {
+    /* 增加主内容区域最大宽度 */
+    --content-max-width: 1200px;
+}
+
+/* 主内容容器 */
+.content main {
+    max-width: var(--content-max-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 0 15px !important;
+}
+
+/* 调整 page 层的宽度和内边距，给两侧翻页按钮留出足够的空间（60px） */
+.page-wrapper .page {
+    max-width: calc(var(--content-max-width) + 120px) !important;
+    padding-left: 60px !important;
+    padding-right: 60px !important;
+}
+
+/* 两侧悬浮翻页按钮的位置与宽度调小，避免遮挡页面文字 */
+.nav-wide-wrapper {
+    padding: 0 !important;
+}
+
+.nav-chapters {
+    min-width: 45px !important;
+    max-width: 50px !important;
+}
+
+/* 搜索框与搜索结果最大宽度跟随内容宽度 */
+.searchbar-outer,
+.searchresults-outer {
+    max-width: var(--content-max-width) !important;
+}
+
+
