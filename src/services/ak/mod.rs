@@ -2,7 +2,7 @@
 //!
 //! 提供 AK 模块核心数据的获取与处理逻辑
 
-use crate::models::ak::{AkInfo, EpuIndexItem};
+use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};
 use calamine::{DataType, Reader, Xlsx};
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -301,6 +301,318 @@ fn parse_epu_excel(bytes: &[u8]) -> Result<Vec<EpuIndexItem>, String> {
     Ok(items)
 }
 
+/// 美联储 FRED-MD (月度) 宏观经济数据
+pub async fn fred_md(date: Option<String>) -> Result<Vec<FredItem>, String> {
+    let date_str = date.unwrap_or_else(|| "2020-01".to_string());
+    let url = format!(
+        "https://s3.amazonaws.com/files.fred.stlouisfed.org/fred-md/monthly/{}.csv",
+        date_str
+    );
+    fetch_and_parse_fred_csv(&url).await
+}
+
+/// 美联储 FRED-QD (季度) 宏观经济数据
+pub async fn fred_qd(date: Option<String>) -> Result<Vec<FredItem>, String> {
+    let date_str = date.unwrap_or_else(|| "2020-01".to_string());
+    let url = format!(
+        "https://s3.amazonaws.com/files.fred.stlouisfed.org/fred-md/quarterly/{}.csv",
+        date_str
+    );
+    fetch_and_parse_fred_csv(&url).await
+}
+
+/// 请求并通用解析 FRED CSV 数据
+async fn fetch_and_parse_fred_csv(url: &str) -> Result<Vec<FredItem>, String> {
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求 FRED 数据失败 [{}]: {}", url, e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "请求 FRED 数据失败，HTTP 状态码: {}",
+            response.status()
+        ));
+    }
+
+    let csv_content = response
+        .text()
+        .await
+        .map_err(|e| format!("读取 CSV 文本失败: {}", e))?;
+
+    parse_fred_csv(&csv_content)
+}
+
+/// 解析 FRED CSV 内容
+fn parse_fred_csv(csv_content: &str) -> Result<Vec<FredItem>, String> {
+    let mut reader = csv::ReaderBuilder::new()
+        .flexible(true)
+        .has_headers(true)
+        .from_reader(csv_content.as_bytes());
+
+    let headers = reader
+        .headers()
+        .map_err(|e| format!("读取 CSV 表头失败: {}", e))?
+        .clone();
+
+    let mut items = Vec::new();
+
+    for result in reader.records() {
+        let record = match result {
+            Ok(rec) => rec,
+            Err(_) => continue,
+        };
+
+        let mut data = HashMap::new();
+
+        for (idx, field) in record.iter().enumerate() {
+            let col_name = headers.get(idx).unwrap_or("").trim();
+            if col_name.is_empty() {
+                continue;
+            }
+
+            let field_trimmed = field.trim();
+            if let Ok(v_f64) = field_trimmed.parse::<f64>() {
+                data.insert(col_name.to_string(), serde_json::Value::from(v_f64));
+            } else if !field_trimmed.is_empty() {
+                data.insert(col_name.to_string(), serde_json::Value::from(field_trimmed));
+            }
+        }
+
+        if !data.is_empty() {
+            items.push(FredItem { data });
+        }
+    }
+
+    Ok(items)
+}
+
+/// Oxford-Man 研究所 Realized Volatility 数据
+pub async fn article_oman_rv(
+    symbol: Option<String>,
+    index: Option<String>,
+) -> Result<Vec<VolatilityItem>, String> {
+    let sym = symbol.unwrap_or_else(|| "FTSE".to_string());
+    let idx = index.unwrap_or_else(|| "rk_th2".to_string());
+
+    let url = "https://realized.oxford-man.ox.ac.uk/theme/js/visualization-data.js?20191111113154";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求 Oxford-Man 数据失败: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!(
+            "请求 Oxford-Man 数据失败, 状态码: {}",
+            res.status()
+        ));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("读取 Oxford-Man 响应失败: {}", e))?;
+
+    parse_oman_rv_js(&text, &sym, &idx)
+}
+
+/// 解析 Oxford-Man 脚本 JSON 变量
+fn parse_oman_rv_js(text: &str, symbol: &str, index: &str) -> Result<Vec<VolatilityItem>, String> {
+    let start_idx = text
+        .find('{')
+        .ok_or_else(|| "无法在响应脚本中定位 JSON 起始位置".to_string())?;
+    let end_idx = text
+        .rfind('}')
+        .ok_or_else(|| "无法在响应脚本中定位 JSON 结束位置".to_string())?;
+
+    let json_str = &text[start_idx..=end_idx];
+    let v: serde_json::Value =
+        serde_json::from_str(json_str).map_err(|e| format!("解析 Oxford-Man JSON 失败: {}", e))?;
+
+    let target_key = format!(".{}", symbol);
+    let sym_obj = v
+        .get(&target_key)
+        .ok_or_else(|| format!("未找到标的代码 [{}] 的数据", symbol))?;
+
+    let dates = sym_obj
+        .get("dates")
+        .and_then(|d| d.as_array())
+        .ok_or_else(|| format!("标的 [{}] 缺少 dates 数组", symbol))?;
+
+    let index_data = sym_obj
+        .get(index)
+        .and_then(|i| i.get("data"))
+        .and_then(|d| d.as_array())
+        .ok_or_else(|| format!("标的 [{}] 缺少指标 [{}] 的 data 数组", symbol, index))?;
+
+    let mut items = Vec::new();
+    let count = dates.len().min(index_data.len());
+
+    for i in 0..count {
+        let timestamp_ms = dates[i].as_i64().unwrap_or(0);
+        let val = index_data[i].as_f64();
+
+        let date_str = chrono::DateTime::from_timestamp(timestamp_ms / 1000, 0)
+            .map(|dt| dt.format("%Y-%m-%d").to_string())
+            .unwrap_or_else(|| timestamp_ms.to_string());
+
+        items.push(VolatilityItem {
+            date: date_str,
+            value: val,
+        });
+    }
+
+    Ok(items)
+}
+
+/// Oxford-Man 研究所 Realized Volatility 简易图表数据
+pub async fn article_oman_rv_short(symbol: Option<String>) -> Result<Vec<VolatilityItem>, String> {
+    let sym = symbol.unwrap_or_else(|| "FTSE".to_string());
+    let url = "https://realized.oxford-man.ox.ac.uk/theme/js/front-page-chart.js";
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求 Oxford-Man 短曲线数据失败: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!(
+            "请求 Oxford-Man 短曲线数据失败, 状态码: {}",
+            res.status()
+        ));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("读取 Oxford-Man 响应失败: {}", e))?;
+
+    let start_idx = text
+        .find('{')
+        .ok_or_else(|| "无法定位 JSON 起始".to_string())?;
+    let end_idx = text
+        .rfind('}')
+        .ok_or_else(|| "无法定位 JSON 结束".to_string())?;
+
+    let json_str = &text[start_idx..=end_idx];
+    let v: serde_json::Value = serde_json::from_str(json_str)
+        .map_err(|e| format!("解析 Oxford-Man 短曲线 JSON 失败: {}", e))?;
+
+    let target_key = format!(".{}", sym);
+    let data_arr = v
+        .get(&target_key)
+        .and_then(|o| o.get("data"))
+        .and_then(|a| a.as_array())
+        .ok_or_else(|| format!("未找到标的 [{}] 的短曲线数据", sym))?;
+
+    let mut items = Vec::new();
+    for row in data_arr {
+        if let Some(arr) = row.as_array() {
+            if arr.len() >= 2 {
+                let timestamp_ms = arr[0].as_i64().unwrap_or(0);
+                let val = arr[1].as_f64();
+                let date_str = chrono::DateTime::from_timestamp(timestamp_ms / 1000, 0)
+                    .map(|dt| dt.format("%Y-%m-%d").to_string())
+                    .unwrap_or_else(|| timestamp_ms.to_string());
+
+                items.push(VolatilityItem {
+                    date: date_str,
+                    value: val,
+                });
+            }
+        }
+    }
+
+    Ok(items)
+}
+
+/// 修大成主页 Risk Lab - Realized Volatility 数据
+pub async fn article_rlab_rv(symbol: Option<String>) -> Result<Vec<VolatilityItem>, String> {
+    let sym = symbol.unwrap_or_else(|| "39693".to_string());
+    let url = format!("https://dachxiu.chicagobooth.edu/data.php?ticker={}", sym);
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("请求 Risk Lab 失败: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("请求 Risk Lab 失败，状态码: {}", res.status()));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("读取 Risk Lab 页面失败: {}", e))?;
+
+    parse_rlab_rv_html(&text, &sym)
+}
+
+/// 解析 Risk Lab HTML/Text
+fn parse_rlab_rv_html(html: &str, symbol: &str) -> Result<Vec<VolatilityItem>, String> {
+    let document = scraper::Html::parse_document(html);
+    let p_selector =
+        scraper::Selector::parse("p").map_err(|_| "构建 CSS 选择器失败".to_string())?;
+
+    let p_element = document
+        .select(&p_selector)
+        .next()
+        .ok_or_else(|| "未找到包含数据的 <p> 标签".to_string())?;
+
+    let p_text = p_element.text().collect::<Vec<_>>().join("");
+    let parts: Vec<&str> = p_text.split(symbol).collect();
+
+    if parts.len() < 3 {
+        return Err("解析 Risk Lab 结构失败，分隔部分不足".to_string());
+    }
+
+    let mut items = Vec::new();
+
+    for line in parts[2].lines() {
+        let line_trimmed = line.trim();
+        if line_trimmed.is_empty() {
+            continue;
+        }
+
+        let tokens: Vec<&str> = line_trimmed.split_whitespace().collect();
+        if tokens.len() >= 2 {
+            let date_str = tokens[0].to_string();
+            let val = tokens[1].parse::<f64>().ok();
+
+            items.push(VolatilityItem {
+                date: date_str,
+                value: val,
+            });
+        }
+    }
+
+    Ok(items)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,5 +636,27 @@ mod tests {
         assert_eq!(items[0].year, Some(2023));
         assert_eq!(items[0].month, Some(1));
         assert_eq!(items[0].epu, Some(120.5));
+    }
+
+    #[tokio::test]
+    async fn test_parse_fred_csv() {
+        let sample_csv = "sasdate,RPI,W875RX1\n1/1/1959,2437.296,2288.8\n2/1/1959,2446.91,2297.0\n";
+        let res = parse_fred_csv(sample_csv);
+        assert!(res.is_ok());
+        let items = res.unwrap();
+        assert_eq!(items.len(), 2);
+        assert!(items[0].data.contains_key("sasdate"));
+        assert!(items[0].data.contains_key("RPI"));
+    }
+
+    #[tokio::test]
+    async fn test_parse_rlab_rv_html() {
+        let sample_html = "<html><body><p>Header39693Line139693\n19960102 0.1234\n19960104 0.5678</p></body></html>";
+        let res = parse_rlab_rv_html(sample_html, "39693");
+        assert!(res.is_ok());
+        let items = res.unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].date, "19960102");
+        assert_eq!(items[0].value, Some(0.1234));
     }
 }

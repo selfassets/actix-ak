@@ -39,6 +39,30 @@ GET /api/v1/ak/info
 GET /api/v1/ak/article_epu_index?symbol=China
 ```
 
+#### 获取美联储 FRED-MD 月度宏观数据
+
+```
+GET /api/v1/ak/fred_md?date=2023-03
+```
+
+#### 获取美联储 FRED-QD 季度宏观数据
+
+```
+GET /api/v1/ak/fred_qd?date=2023-03
+```
+
+#### 获取 Oxford-Man 实际波动率数据
+
+```
+GET /api/v1/ak/article_oman_rv?symbol=FTSE&index=rk_th2
+```
+
+#### 获取 Risk Lab 实际波动率数据
+
+```
+GET /api/v1/ak/article_rlab_rv?symbol=39693
+```
+
 ### 股票相关接口
 
 #### 获取股票列表

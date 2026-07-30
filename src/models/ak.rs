@@ -49,3 +49,56 @@ pub struct EpuIndexItem {
     #[serde(flatten)]
     pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
+
+/// FRED 宏观经济数据查询参数
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::IntoParams, utoipa::ToSchema))]
+pub struct FredQuery {
+    /// 年月字符串，默认 "2020-01"（例如 "2020-03", "2023-01" 等）
+    pub date: Option<String>,
+}
+
+/// FRED 宏观经济数据记录条目
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema))]
+pub struct FredItem {
+    /// 动态包含 CSV 的所有列字段及对应值
+    #[serde(flatten)]
+    pub data: std::collections::HashMap<String, serde_json::Value>,
+}
+
+/// Oxford-Man 实际波动率查询参数
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::IntoParams, utoipa::ToSchema))]
+pub struct OmanRvQuery {
+    /// 代码，如 "FTSE", "SPX", "SSEC" 等（默认 "FTSE"）
+    pub symbol: Option<String>,
+    /// 指标类型，如 "rk_th2", "rv5", "rv10" 等（默认 "rk_th2"）
+    pub index: Option<String>,
+}
+
+/// Oxford-Man 实际波动率简易接口查询参数
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::IntoParams, utoipa::ToSchema))]
+pub struct OmanRvShortQuery {
+    /// 代码，如 "FTSE", "SPX", "SSEC" 等（默认 "FTSE"）
+    pub symbol: Option<String>,
+}
+
+/// Risk Lab 实际波动率查询参数
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::IntoParams, utoipa::ToSchema))]
+pub struct RlabRvQuery {
+    /// 股票/品种代码，默认 "39693"
+    pub symbol: Option<String>,
+}
+
+/// 波动率通用时间序列条目
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::ToSchema))]
+pub struct VolatilityItem {
+    /// 日期或时间戳描述
+    pub date: String,
+    /// 波动率数值
+    pub value: Option<f64>,
+}

@@ -33,6 +33,31 @@ GET {{baseUrl}}/ak/article_epu_index?symbol=USA
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+### 获取美联储 FRED-MD (月度) 宏观经济数据
+GET {{baseUrl}}/ak/fred_md?date=2023-03
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取美联储 FRED-QD (季度) 宏观经济数据
+GET {{baseUrl}}/ak/fred_qd?date=2023-03
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取 Oxford-Man 实际波动率数据
+GET {{baseUrl}}/ak/article_oman_rv?symbol=FTSE&index=rk_th2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取 Oxford-Man 实际波动率简易数据
+GET {{baseUrl}}/ak/article_oman_rv_short?symbol=FTSE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取 Risk Lab 实际波动率数据
+GET {{baseUrl}}/ak/article_rlab_rv?symbol=39693
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
 ### ============================================================
 ### 期货 - 交易所和品种信息
 ### ============================================================
