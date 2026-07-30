@@ -1,0 +1,16 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 拆借利率与利率接口
+### ============================================================
+
+### 上海同业拆借利率 Shibor - 隔夜
+GET {{baseUrl}}/ak/interest_rate/rate_interbank?market=上海银行同业拆借市场&symbol=Shibor人民币&indicator=隔夜
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 伦敦同业拆借利率 Libor - 1月美元
+GET {{baseUrl}}/ak/interest_rate/rate_interbank?market=伦敦银行同业拆借市场&symbol=Libor美元&indicator=1月
+Authorization: Bearer {{token}}
+Content-Type: application/json

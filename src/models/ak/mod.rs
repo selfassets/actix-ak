@@ -6,6 +6,7 @@ pub mod bank;
 pub mod bond;
 pub mod cal;
 pub mod currency;
+pub mod interest_rate;
 
 use serde::{Deserialize, Serialize};
 

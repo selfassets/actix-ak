@@ -6,6 +6,7 @@ pub mod bank;
 pub mod bond;
 pub mod cal;
 pub mod currency;
+pub mod interest_rate;
 
 use crate::models::{
     ak::EpuIndexQuery, ak::FredQuery, ak::OmanRvQuery, ak::OmanRvShortQuery, ak::RlabRvQuery,
@@ -207,6 +208,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .configure(bank::config)
             .configure(bond::config)
             .configure(currency::config)
-            .configure(cal::config),
+            .configure(cal::config)
+            .configure(interest_rate::config),
     );
 }

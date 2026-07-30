@@ -6,6 +6,7 @@ pub mod bank;
 pub mod bond;
 pub mod cal;
 pub mod currency;
+pub mod interest_rate;
 
 use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};
 use calamine::{DataType, Reader, Xlsx};

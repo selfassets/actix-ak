@@ -54,3 +54,118 @@ Content-Type: application/json
 GET {{baseUrl}}/ak/bond/cov_comparison
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+### 沪深债券实时行情数据 (新浪)
+GET {{baseUrl}}/ak/bond/zh_hs_spot
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 质押式国债逆回购历史 K 线数据 (GC001)
+GET {{baseUrl}}/ak/bond/buy_back_hist?symbol=204001
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国外汇交易中心收益率曲线品种映射表
+GET {{baseUrl}}/ak/bond/china_close_return_map
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 上交所债券现货市场概览
+GET {{baseUrl}}/ak/bond/cash_summary_sse?start_date=20210111
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 上交所债券成交概览汇总
+GET {{baseUrl}}/ak/bond/deal_summary_sse?start_date=20210104
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 同花顺可转债基本信息列表
+GET {{baseUrl}}/ak/bond/zh_cov_info_ths
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 新浪财经可转债概况汇总
+GET {{baseUrl}}/ak/bond/cb_summary_sina?symbol=sh155255
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国外汇交易中心现券做市报价
+GET {{baseUrl}}/ak/bond/spot_quote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国外汇交易中心现券成交行情
+GET {{baseUrl}}/ak/bond/spot_deal
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国债券信息网国债及各期限收益率曲线
+GET {{baseUrl}}/ak/bond/china_yield?start_date=20200204&end_date=20210124
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国货币网债券信息查询参数 (评级等级/主承销商等)
+GET {{baseUrl}}/ak/bond/info_cm_query?symbol=评级等级
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国货币网债券信息列表
+GET {{baseUrl}}/ak/bond/info_cm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国银行间市场交易商协会 (NAFMII) 债务融资工具注册信息
+GET {{baseUrl}}/ak/bond/debt_nafmii?symbol=1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国货币网单只债券详情
+GET {{baseUrl}}/ak/bond/info_detail_cm?symbol=egfjh08154
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 巨潮资讯债券发行数据
+GET {{baseUrl}}/ak/bond/issue_cninfo?start_date=20210910&end_date=20211109
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 东方财富可转债价值分析数据
+GET {{baseUrl}}/ak/bond/zh_cov_value_analysis?symbol=113527
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中债国债指数 (5Y)
+GET {{baseUrl}}/ak/bond/treasury_index_cbond?symbol=5Y
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 沪深可转债历史日 K 线行情 (sh010107)
+GET {{baseUrl}}/ak/bond/zh_hs_cov_daily?symbol=sh010107
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 沪深现券/债券历史日 K 线行情 (sh010107)
+GET {{baseUrl}}/ak/bond/zh_hs_daily?symbol=sh010107
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 集思录可转债转股价调整日志
+GET {{baseUrl}}/ak/bond/cb_adj_logs_jsl?symbol=128013
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中债指数可选项列表
+GET {{baseUrl}}/ak/bond/available_index_cbond
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中债通用指数历史数据 (新综合指数-全价)
+GET {{baseUrl}}/ak/bond/index_general_cbond?index_category=新综合指数&indicator=全价&period=总值
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国外汇交易中心收盘收益率曲线历史数据
+GET {{baseUrl}}/ak/bond/china_close_return?symbol=CYCC000&start_date=20231101&end_date=20231101
+Authorization: Bearer {{token}}
+Content-Type: application/json
