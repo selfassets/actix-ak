@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-80548837.js";
+            window.path_to_searchindex_js = "../searchindex-ff77dd1f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-16b67c8b.js"></script>
+        <script src="../toc-1cb046e9.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -198,6 +198,25 @@
 <tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"美元"</code></td><td style="text-align: left">货币名称，如 <code>"美元"</code>, <code>"欧元"</code>, <code>"日元"</code>, <code>"港币"</code>, <code>"英镑"</code> 等</td></tr>
 <tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20230101"</code></td><td style="text-align: left">起始日期 YYYYMMDD</td></tr>
 <tr><td style="text-align: left"><code>end_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20231231"</code></td><td style="text-align: left">结束日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="2-国家外汇管理局-safe-人民币汇率中间价"><a class="header" href="#2-国家外汇管理局-safe-人民币汇率中间价">2. 国家外汇管理局 (SAFE) 人民币汇率中间价</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/currency/boc_safe</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-1"><a class="header" href="#请求参数-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>start_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"2023-01-01"</code></td><td style="text-align: left">开始日期 YYYYMMDD 或 YYYY-MM-DD</td></tr>
+<tr><td style="text-align: left"><code>end_date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left">当前日期</td><td style="text-align: left">结束日期 YYYYMMDD 或 YYYY-MM-DD</td></tr>
 </tbody>
 </table>
 </div>
