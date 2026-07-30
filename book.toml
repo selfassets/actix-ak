@@ -7,3 +7,5 @@ title = "Actix-AK API Documentation"
 
 [output.html]
 git-repository-url = "https://github.com/dwx/actix-ak"
+additional-css = ["theme/custom.css"]
+

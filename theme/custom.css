@@ -1,0 +1,12 @@
+/* 自定义 mdbook 样式：扩大主体内容区域的最大宽度，减少左右空白 */
+:root {
+    --content-max-width: 90%;
+}
+
+.page-wrapper .page {
+    max-width: var(--content-max-width);
+}
+
+.content main {
+    max-width: var(--content-max-width);
+}
