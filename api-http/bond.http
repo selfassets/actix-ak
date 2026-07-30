@@ -1,0 +1,56 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 债券与国债收益率接口
+### ============================================================
+
+### 沪深可转债实时行情
+GET {{baseUrl}}/ak/bond/zh_cov_spot
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国国债收益率历史数据 (10年期)
+GET {{baseUrl}}/ak/bond/gb_zh_sina?symbol=中国10年期国债
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国国债收益率历史数据 (10年期)
+GET {{baseUrl}}/ak/bond/gb_us_sina?symbol=美国10年期国债
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中美国债收益率对比数据 (东方财富)
+GET {{baseUrl}}/ak/bond/zh_us_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 上证质押式国债逆回购行情 (GC001等)
+GET {{baseUrl}}/ak/bond/sh_buy_back
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 深证质押式国债逆回购行情 (R-001等)
+GET {{baseUrl}}/ak/bond/sz_buy_back
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 集思录可转债等权指数历史
+GET {{baseUrl}}/ak/bond/cb_index_jsl
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 集思录可转债强赎信息列表
+GET {{baseUrl}}/ak/bond/cb_redeem_jsl
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 新浪财经可转债详情资料
+GET {{baseUrl}}/ak/bond/cb_profile_sina?symbol=sz128039
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 东方财富网可转债比价表
+GET {{baseUrl}}/ak/bond/cov_comparison
+Authorization: Bearer {{token}}
+Content-Type: application/json

@@ -3,6 +3,9 @@
 //! 定义 AK 模块相关的请求和响应结构
 
 pub mod bank;
+pub mod bond;
+pub mod cal;
+pub mod currency;
 
 use serde::{Deserialize, Serialize};
 

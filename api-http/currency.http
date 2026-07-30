@@ -1,0 +1,16 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 外汇与货币牌价接口
+### ============================================================
+
+### 获取中国银行外汇牌价历史 - 美元
+GET {{baseUrl}}/ak/currency/boc_sina?symbol=美元&start_date=20230101&end_date=20230601
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取中国银行外汇牌价历史 - 欧元
+GET {{baseUrl}}/ak/currency/boc_sina?symbol=欧元&start_date=20230101&end_date=20230601
+Authorization: Bearer {{token}}
+Content-Type: application/json

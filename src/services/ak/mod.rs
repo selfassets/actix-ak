@@ -3,6 +3,9 @@
 //! 提供 AK 模块核心数据的获取与处理逻辑
 
 pub mod bank;
+pub mod bond;
+pub mod cal;
+pub mod currency;
 
 use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};
 use calamine::{DataType, Reader, Xlsx};
