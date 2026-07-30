@@ -5,6 +5,7 @@
 pub mod bank;
 pub mod bond;
 pub mod cal;
+pub mod crypto;
 pub mod currency;
 pub mod interest_rate;
 
@@ -209,6 +210,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .configure(bond::config)
             .configure(currency::config)
             .configure(cal::config)
-            .configure(interest_rate::config),
+            .configure(interest_rate::config)
+            .configure(crypto::config),
     );
 }

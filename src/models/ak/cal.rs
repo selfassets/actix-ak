@@ -30,3 +30,19 @@ pub struct YangZhangVolatilityResult {
     /// 权重 k
     pub k: f64,
 }
+
+/// 分钟 K 线清洗数据查询参数
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[cfg_attr(feature = "swagger", derive(utoipa::IntoParams, utoipa::ToSchema))]
+pub struct RvMinuteQuery {
+    /// 证券/期货合约代码，例如 "000001" 或 "IF2008"
+    pub symbol: Option<String>,
+    /// 分钟周期，选择范围 {'1','5','15','30','60'}，默认 "5"
+    pub period: Option<String>,
+    /// 开始日期时间，格式 YYYY-MM-DD HH:MM:SS 或 YYYYMMDD
+    pub start_date: Option<String>,
+    /// 结束日期时间，格式 YYYY-MM-DD HH:MM:SS 或 YYYYMMDD
+    pub end_date: Option<String>,
+    /// 复权类型，选择范围 {'','qfq','hfq'}，默认 "hfq"
+    pub adjust: Option<String>,
+}

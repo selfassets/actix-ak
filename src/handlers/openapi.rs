@@ -31,6 +31,7 @@ use utoipa::OpenApi;
         (name = "currency", description = "外汇与货币牌价接口"),
         (name = "cal", description = "波动率估算与算法接口"),
         (name = "interest_rate", description = "银行间拆借利率接口"),
+        (name = "crypto", description = "加密货币行情与持仓接口"),
         (name = "stocks", description = "股票数据接口"),
         (name = "futures", description = "期货数据接口"),
         (name = "futures-main", description = "主力连续合约接口"),
@@ -91,8 +92,13 @@ use utoipa::OpenApi;
         crate::handlers::ak::currency::get_currency_boc_sina,
         // 量化计算接口
         crate::handlers::ak::cal::calculate_volatility_yz,
+        crate::handlers::ak::cal::get_rv_stock_em,
+        crate::handlers::ak::cal::get_rv_futures_sina,
         // 拆借利率接口
         crate::handlers::ak::interest_rate::get_rate_interbank,
+        // 加密货币接口
+        crate::handlers::ak::crypto::get_crypto_bitcoin_cme,
+        crate::handlers::ak::crypto::get_crypto_bitcoin_hold_report,
         // 股票接口
         crate::handlers::stock::list_stocks,
         crate::handlers::stock::get_stock_info,
@@ -168,8 +174,12 @@ use utoipa::OpenApi;
             crate::models::ak::currency::CurrencyBocItem,
             crate::models::ak::cal::OhlcItem,
             crate::models::ak::cal::YangZhangVolatilityResult,
+            crate::models::ak::cal::RvMinuteQuery,
             crate::models::ak::interest_rate::InterbankRateQuery,
             crate::models::ak::interest_rate::InterbankRateItem,
+            crate::models::ak::crypto::CryptoQuery,
+            crate::models::ak::crypto::CryptoBitcoinCmeItem,
+            crate::models::ak::crypto::CryptoBitcoinHoldItem,
             crate::models::StockInfo,
             crate::models::StockQuery,
             crate::models::StockHistoryData,

@@ -1,6 +1,6 @@
 //! 波动率与量化计算服务 (Yang-Zhang Realized Volatility)
 
-use crate::models::ak::cal::{OhlcItem, YangZhangVolatilityResult};
+use crate::models::ak::cal::{OhlcItem, RvMinuteQuery, YangZhangVolatilityResult};
 
 /// 根据 OHLC 数据计算 Yang-Zhang (YZ) 已实现波动率
 ///
@@ -80,6 +80,148 @@ pub fn calculate_yang_zhang_volatility(
         vrs,
         k,
     })
+}
+
+/// 股票分钟级历史行情数据清洗格式化（支持东方财富）
+pub async fn rv_from_stock_zh_a_hist_min_em(query: RvMinuteQuery) -> Result<Vec<OhlcItem>, String> {
+    let symbol = query.symbol.unwrap_or_else(|| "000001".to_string());
+    let period = query.period.unwrap_or_else(|| "5".to_string());
+    let adjust = query.adjust.unwrap_or_else(|| "hfq".to_string());
+
+    let market_id = if symbol.starts_with('6') || symbol.starts_with('9') {
+        "1"
+    } else {
+        "0"
+    };
+    let secid = format!("{}.{}", market_id, symbol);
+
+    let adjust_code = match adjust.as_str() {
+        "qfq" => "1",
+        "hfq" => "2",
+        _ => "0",
+    };
+
+    let url = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(url)
+        .query(&[
+            ("secid", secid.as_str()),
+            ("klt", period.as_str()),
+            ("fqt", adjust_code),
+            ("lmt", "1000"),
+            ("end", "20500000"),
+            ("iscca", "1"),
+            ("fields1", "f1,f2,f3,f4,f5,f6,f7,f8"),
+            (
+                "fields2",
+                "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63,f64",
+            ),
+        ])
+        .send()
+        .await
+        .map_err(|e| format!("请求股票分钟 K 线失败: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("东方财富接口状态码: {}", res.status()));
+    }
+
+    let json_val: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("解析 JSON 失败: {}", e))?;
+    let klines_arr = json_val["data"]["klines"]
+        .as_array()
+        .ok_or_else(|| "缺失 klines 数据".to_string())?;
+
+    let mut result = Vec::new();
+    for row in klines_arr {
+        if let Some(s) = row.as_str() {
+            let parts: Vec<&str> = s.split(',').collect();
+            if parts.len() >= 6 {
+                let date = parts[0].to_string();
+                let open = parts[1].parse::<f64>().unwrap_or(0.0);
+                let close = parts[2].parse::<f64>().unwrap_or(0.0);
+                let high = parts[3].parse::<f64>().unwrap_or(0.0);
+                let low = parts[4].parse::<f64>().unwrap_or(0.0);
+
+                if open > 0.0 {
+                    result.push(OhlcItem {
+                        date,
+                        open,
+                        high,
+                        low,
+                        close,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// 期货分钟级历史行情数据清洗格式化（新浪源）
+pub async fn rv_from_futures_zh_minute_sina(query: RvMinuteQuery) -> Result<Vec<OhlcItem>, String> {
+    let symbol = query.symbol.unwrap_or_else(|| "IF2008".to_string());
+    let period = query.period.unwrap_or_else(|| "5".to_string());
+
+    let url = format!(
+        "https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20_{}=/InnerFuturesNewService.getMinLine?symbol={}&type={}",
+        symbol, symbol, period
+    );
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("请求新浪期货分钟 K 线失败: {}", e))?;
+    if !res.status().is_success() {
+        return Err(format!("新浪接口状态码: {}", res.status()));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("读取响应失败: {}", e))?;
+    let start_idx = text.find('[').ok_or_else(|| "数据格式不匹配".to_string())?;
+    let end_idx = text
+        .rfind(']')
+        .ok_or_else(|| "数据格式不匹配".to_string())?;
+
+    let json_str = &text[start_idx..=end_idx];
+    let arr: Vec<serde_json::Value> =
+        serde_json::from_str(json_str).map_err(|e| format!("解析 JSON 失败: {}", e))?;
+
+    let mut result = Vec::new();
+    for row in arr {
+        let date = row[0].as_str().unwrap_or("").to_string();
+        let open = row[1].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let high = row[2].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let low = row[3].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+        let close = row[4].as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+
+        if open > 0.0 {
+            result.push(OhlcItem {
+                date,
+                open,
+                high,
+                low,
+                close,
+            });
+        }
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]

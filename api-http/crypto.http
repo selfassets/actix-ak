@@ -1,0 +1,16 @@
+@baseUrl = http://0.0.0.0:8080/api/v1
+@token = 12345678
+
+### ============================================================
+### 加密货币行情与持仓接口
+### ============================================================
+
+### CME 比特币成交量及持仓报告
+GET {{baseUrl}}/ak/crypto/bitcoin_cme?date=20230830
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 全球机构及上市公司比特币持仓报告
+GET {{baseUrl}}/ak/crypto/bitcoin_hold_report
+Authorization: Bearer {{token}}
+Content-Type: application/json
