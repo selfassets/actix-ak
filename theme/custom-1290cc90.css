@@ -1,0 +1,46 @@
+/* 自定义 mdbook 样式：扩大内容区域、两端自动居中，修复翻页遮挡与空白过多问题 */
+:root {
+    /* 扩大主内容区域的最大宽度（80%或最大 1400px） */
+    --content-max-width: 90%;
+}
+
+/* 页面主框架居中，左右预留空间防止被侧边悬浮翻页按钮挡住 */
+.page-wrapper .page {
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 70px !important;
+    padding-right: 70px !important;
+    box-sizing: border-box !important;
+}
+
+/* 主内容容器居中，充分利用中间宽度 */
+.content main {
+    max-width: var(--content-max-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 0 20px !important;
+}
+
+/* 顶部菜单栏与搜索框宽度与内容对齐并居中 */
+#mdbook-menu-bar,
+.searchbar-outer,
+.searchresults-outer {
+    max-width: var(--content-max-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* 调整两侧悬浮翻页按钮：保持固定在屏幕左右边缘，宽度紧凑，透明底色避免盖住文字 */
+.nav-wide-wrapper {
+    padding: 0 !important;
+}
+
+.nav-chapters {
+    min-width: 40px !important;
+    max-width: 50px !important;
+    z-index: 100 !important;
+}
+
+
+
