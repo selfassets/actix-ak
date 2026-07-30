@@ -15,6 +15,25 @@ GET {{baseUrl}}/health
 Content-Type: application/json
 
 ### ============================================================
+### AkShare 模块接口
+### ============================================================
+
+### 获取 AK 模块信息与数据分类
+GET {{baseUrl}}/ak/info
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取经济政策不确定性指数（EPU Index） - 默认 (China)
+GET {{baseUrl}}/ak/article_epu_index?symbol=China
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 获取经济政策不确定性指数（EPU Index） - 美国 (USA)
+GET {{baseUrl}}/ak/article_epu_index?symbol=USA
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### ============================================================
 ### 期货 - 交易所和品种信息
 ### ============================================================
 

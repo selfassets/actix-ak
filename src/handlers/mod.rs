@@ -2,6 +2,7 @@
 //!
 //! 包含所有 API 端点的处理函数
 
+pub mod ak; // AK 相关接口
 pub mod futures; // 期货相关接口
 pub mod health; // 健康检查接口
 pub mod stock; // 股票相关接口
@@ -19,6 +20,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/api/v1")
             .configure(health::config) // 健康检查: /api/v1/health
             .configure(stock::config) // 股票接口: /api/v1/stocks
-            .configure(futures::config), // 期货接口: /api/v1/futures
+            .configure(futures::config) // 期货接口: /api/v1/futures
+            .configure(ak::config), // AK 接口: /api/v1/ak
     );
 }

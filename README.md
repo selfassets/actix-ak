@@ -25,6 +25,20 @@
 GET /api/v1/health
 ```
 
+### AK 模块相关接口
+
+#### 获取 AK 模块信息
+
+```
+GET /api/v1/ak/info
+```
+
+#### 获取经济政策不确定性指数 (EPU Index)
+
+```
+GET /api/v1/ak/article_epu_index?symbol=China
+```
+
 ### 股票相关接口
 
 #### 获取股票列表

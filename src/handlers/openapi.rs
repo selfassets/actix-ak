@@ -25,6 +25,7 @@ use utoipa::OpenApi;
     ),
     tags(
         (name = "health", description = "健康检查接口"),
+        (name = "ak", description = "AkShare 模块接口"),
         (name = "stocks", description = "股票数据接口"),
         (name = "futures", description = "期货数据接口"),
         (name = "futures-main", description = "主力连续合约接口"),
@@ -34,6 +35,9 @@ use utoipa::OpenApi;
     paths(
         // 健康检查
         crate::handlers::health::health_check,
+        // AK 接口
+        crate::handlers::ak::get_info,
+        crate::handlers::ak::get_article_epu_index,
         // 股票接口
         crate::handlers::stock::list_stocks,
         crate::handlers::stock::get_stock_info,
@@ -66,6 +70,10 @@ use utoipa::OpenApi;
     components(
         schemas(
             crate::models::ApiResponse<String>,
+            crate::models::AkInfo,
+            crate::models::AkQuery,
+            crate::models::EpuIndexItem,
+            crate::models::EpuIndexQuery,
             crate::models::StockInfo,
             crate::models::StockQuery,
             crate::models::StockHistoryData,
