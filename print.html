@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6d3fe65c.js";
+            window.path_to_searchindex_js = "searchindex-80548837.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-51285d98.js"></script>
+        <script src="toc-16b67c8b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1024,6 +1024,45 @@
   { "date": "2024-01-03", "open": 10.5, "high": 10.9, "low": 10.2, "close": 10.4 }
 ]
 </code></pre>
+<hr>
+<h2 id="2-股票分钟行情清洗-东方财富"><a class="header" href="#2-股票分钟行情清洗-东方财富">2. 股票分钟行情清洗 (东方财富)</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/cal/rv_stock_em</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-21"><a class="header" href="#请求参数-21">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"000001"</code></td><td style="text-align: left">股票代码</td></tr>
+<tr><td style="text-align: left"><code>period</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"5"</code></td><td style="text-align: left">时间周期 (‘1’,‘5’,‘15’,‘30’,‘60’)</td></tr>
+<tr><td style="text-align: left"><code>adjust</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"hfq"</code></td><td style="text-align: left">复权方式 (‘’,‘qfq’,‘hfq’)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="3-期货分钟行情清洗-新浪源"><a class="header" href="#3-期货分钟行情清洗-新浪源">3. 期货分钟行情清洗 (新浪源)</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/cal/rv_futures_sina</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-1-3"><a class="header" href="#请求参数-1-3">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"IF2008"</code></td><td style="text-align: left">期货合约代码</td></tr>
+<tr><td style="text-align: left"><code>period</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"5"</code></td><td style="text-align: left">时间周期 (‘1’,‘5’,‘15’,‘30’,‘60’)</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="拆借利率与利率接口"><a class="header" href="#拆借利率与利率接口">拆借利率与利率接口</a></h1>
 <p>提供东方财富网各类银行间拆借利率（Shibor、Chibor、Libor、Euribor、Hibor、Sibor 等）历史数据。</p>
@@ -1036,7 +1075,7 @@
 <li><strong>Method</strong>: <code>GET</code></li>
 <li><strong>Auth</strong>: 需要 Bearer Token</li>
 </ul>
-<h3 id="请求参数-21"><a class="header" href="#请求参数-21">请求参数</a></h3>
+<h3 id="请求参数-22"><a class="header" href="#请求参数-22">请求参数</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1049,6 +1088,36 @@
 </tbody>
 </table>
 </div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="加密货币行情与持仓接口"><a class="header" href="#加密货币行情与持仓接口">加密货币行情与持仓接口</a></h1>
+<p>提供芝加哥商业交易所 (CME) 比特币成交量及全球机构/上市公司持仓报告。</p>
+<h2 id="基础路径-6"><a class="header" href="#基础路径-6">基础路径</a></h2>
+<p><code>/api/v1/ak/crypto</code></p>
+<hr>
+<h2 id="1-cme-比特币成交量及持仓报告"><a class="header" href="#1-cme-比特币成交量及持仓报告">1. CME 比特币成交量及持仓报告</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/crypto/bitcoin_cme</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-23"><a class="header" href="#请求参数-23">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"20230830"</code></td><td style="text-align: left">查询日期 YYYYMMDD</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="2-全球机构及上市公司比特币持仓报告"><a class="header" href="#2-全球机构及上市公司比特币持仓报告">2. 全球机构及上市公司比特币持仓报告</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/crypto/bitcoin_hold_report</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="期货接口"><a class="header" href="#期货接口">期货接口</a></h1>
 <p>提供国内期货和外盘期货的实时行情、历史数据、持仓排名等信息。</p>
