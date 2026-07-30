@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5860cc43.js";
+            window.path_to_searchindex_js = "searchindex-b5460e86.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b4b5a846.js"></script>
+        <script src="toc-df165185.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -200,7 +200,11 @@
 <h2 id="目录"><a class="header" href="#目录">目录</a></h2>
 <ul>
 <li><a href="health">健康检查</a></li>
-<li><a href="ak">AK 模块接口</a></li>
+<li><a href="#akshare-ak-模块接口">AK 模块接口</a>
+<ul>
+<li><a href="#银行与金融监管接口">银行监管接口</a></li>
+</ul>
+</li>
 <li><a href="futures">期货接口</a></li>
 <li><a href="stocks">股票接口</a></li>
 <li><a href="registry">注册中心</a></li>
@@ -431,6 +435,88 @@
   "error": null
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="银行与金融监管接口"><a class="header" href="#银行与金融监管接口">银行与金融监管接口</a></h1>
+<p>提供国家金融监督管理总局（原银保监会）行政处罚公开表等数据接口。</p>
+<h2 id="基础路径-1"><a class="header" href="#基础路径-1">基础路径</a></h2>
+<p><code>/api/v1/ak/bank</code></p>
+<hr>
+<h2 id="1-获取行政处罚数据总条数"><a class="header" href="#1-获取行政处罚数据总条数">1. 获取行政处罚数据总条数</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bank/fjcf_total_num</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-7"><a class="header" href="#请求参数-7">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>item</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"分局本级"</code></td><td style="text-align: left">处罚级别：选择范围 <code>{"机关", "本级", "分局本级"}</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="2-获取行政处罚数据总页数"><a class="header" href="#2-获取行政处罚数据总页数">2. 获取行政处罚数据总页数</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bank/fjcf_total_page</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-1-1"><a class="header" href="#请求参数-1-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>item</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"分局本级"</code></td><td style="text-align: left">处罚级别</td></tr>
+<tr><td style="text-align: left"><code>begin</code></td><td style="text-align: left"><code>integer</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>1</code></td><td style="text-align: left">起始页码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="3-获取行政处罚列表概要"><a class="header" href="#3-获取行政处罚列表概要">3. 获取行政处罚列表概要</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bank/fjcf_list</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-2-1"><a class="header" href="#请求参数-2-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>page</code></td><td style="text-align: left"><code>integer</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>1</code></td><td style="text-align: left">获取页数</td></tr>
+<tr><td style="text-align: left"><code>item</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"分局本级"</code></td><td style="text-align: left">处罚级别</td></tr>
+<tr><td style="text-align: left"><code>begin</code></td><td style="text-align: left"><code>integer</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>1</code></td><td style="text-align: left">起始页码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="4-获取行政处罚信息公开表详情"><a class="header" href="#4-获取行政处罚信息公开表详情">4. 获取行政处罚信息公开表详情</a></h2>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/bank/fjcf_detail</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-3-1"><a class="header" href="#请求参数-3-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>page</code></td><td style="text-align: left"><code>integer</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>1</code></td><td style="text-align: left">获取页数</td></tr>
+<tr><td style="text-align: left"><code>item</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"分局本级"</code></td><td style="text-align: left">处罚级别</td></tr>
+<tr><td style="text-align: left"><code>begin</code></td><td style="text-align: left"><code>integer</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>1</code></td><td style="text-align: left">起始页码</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="期货接口"><a class="header" href="#期货接口">期货接口</a></h1>
 <p>提供国内期货和外盘期货的实时行情、历史数据、持仓排名等信息。</p>

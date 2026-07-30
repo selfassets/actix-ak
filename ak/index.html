@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>健康检查 - Actix-AK API Documentation</title>
+        <title>AK 模块接口 - Actix-AK API Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -12,33 +12,33 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="favicon-8114d1fc.png">
-        <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-e96d0476.css">
-        <link rel="stylesheet" href="css/chrome-d279d366.css">
-        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
-        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
-        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
 
 
         <!-- Provide site root and default themes to javascript -->
         <script>
-            const path_to_root = "";
+            const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b5460e86.js";
+            window.path_to_searchindex_js = "../searchindex-b5460e86.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-df165185.js"></script>
+        <script src="../toc-df165185.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -105,7 +105,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -140,7 +140,7 @@
                     <h1 class="menu-title">Actix-AK API Documentation</h1>
 
                     <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
                         </a>
                         <a href="https://github.com/dwx/actix-ak" title="Git repository" aria-label="Git repository">
@@ -177,32 +177,202 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="健康检查"><a class="header" href="#健康检查">健康检查</a></h1>
-<p>检测服务是否正常运行。</p>
-<h2 id="get-health"><a class="header" href="#get-health">GET /health</a></h2>
-<p>健康检查接口，无需认证。</p>
-<h3 id="请求示例"><a class="header" href="#请求示例">请求示例</a></h3>
-<pre><code class="language-bash">curl -X GET "https://byteappua-actix-ak.zeabur.app/api/v1/health"
-</code></pre>
+                        <h1 id="akshare-ak-模块接口"><a class="header" href="#akshare-ak-模块接口">AkShare (AK) 模块接口</a></h1>
+<p>AK 模块提供 AkShare 基础元数据信息以及文章/宏观不确定性指数等数据接口。</p>
+<h2 id="基础路径"><a class="header" href="#基础路径">基础路径</a></h2>
+<p><code>/api/v1/ak</code></p>
+<hr>
+<h2 id="1-获取-ak-模块信息"><a class="header" href="#1-获取-ak-模块信息">1. 获取 AK 模块信息</a></h2>
+<p>获取服务元数据、版本以及支持的数据分类列表。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/info</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数"><a class="header" href="#请求参数">请求参数</a></h3>
+<p>无</p>
 <h3 id="响应示例"><a class="header" href="#响应示例">响应示例</a></h3>
 <pre><code class="language-json">{
   "success": true,
-  "data": "服务运行正常",
+  "data": {
+    "name": "AkShare Rust Service",
+    "version": "0.1.0",
+    "description": "AkShare financial data service API in Rust",
+    "categories": [
+      "stocks",
+      "futures",
+      "bond",
+      "fx",
+      "crypto",
+      "index",
+      "macro",
+      "article"
+    ]
+  },
   "error": null
 }
 </code></pre>
 <hr>
-<p><a href="index.html">返回首页</a></p>
+<h2 id="2-经济政策不确定性指数-epu-index"><a class="header" href="#2-经济政策不确定性指数-epu-index">2. 经济政策不确定性指数 (EPU Index)</a></h2>
+<p>获取指定国家或地区的经济政策不确定性指数历史数据。数据来源于 <a href="https://www.policyuncertainty.com/index.html">Economic Policy Uncertainty</a>。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_epu_index</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-1"><a class="header" href="#请求参数-1">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"China"</code></td><td style="text-align: left">指定国家或地区名称，如 <code>"China"</code>, <code>"USA"</code>, <code>"Hong Kong"</code>, <code>"Germany"</code> 等</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="响应示例-1"><a class="header" href="#响应示例-1">响应示例</a></h3>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "year": 2023,
+      "month": 1,
+      "epu": 120.5,
+      "SCMP_China_EPU": 120.5
+    },
+    {
+      "year": 2023,
+      "month": 2,
+      "epu": 115.3,
+      "SCMP_China_EPU": 115.3
+    }
+  ],
+  "error": null
+}
+</code></pre>
+<hr>
+<h2 id="3-美联储-fred-md-月度-宏观经济数据"><a class="header" href="#3-美联储-fred-md-月度-宏观经济数据">3. 美联储 FRED-MD (月度) 宏观经济数据</a></h2>
+<p>获取美联储圣路易斯分行 (Federal Reserve Bank of St. Louis) 的 FRED-MD 月度宏观经济数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/fred_md</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-2"><a class="header" href="#请求参数-2">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"2020-01"</code></td><td style="text-align: left">年月字符串，如 <code>"2020-03"</code>, <code>"2023-01"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="4-美联储-fred-qd-季度-宏观经济数据"><a class="header" href="#4-美联储-fred-qd-季度-宏观经济数据">4. 美联储 FRED-QD (季度) 宏观经济数据</a></h2>
+<p>获取美联储圣路易斯分行的 FRED-QD 季度宏观经济数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/fred_qd</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-3"><a class="header" href="#请求参数-3">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>date</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"2020-01"</code></td><td style="text-align: left">年月字符串，如 <code>"2020-03"</code>, <code>"2023-01"</code></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="5-oxford-man-研究所-realized-volatility-数据"><a class="header" href="#5-oxford-man-研究所-realized-volatility-数据">5. Oxford-Man 研究所 Realized Volatility 数据</a></h2>
+<p>获取 Oxford-Man 研究所金融资产/指数的实际波动率序列数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_oman_rv</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-4"><a class="header" href="#请求参数-4">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"FTSE"</code></td><td style="text-align: left">指数/资产代码，如 <code>"FTSE"</code>, <code>"SPX"</code>, <code>"SSEC"</code> 等</td></tr>
+<tr><td style="text-align: left"><code>index</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"rk_th2"</code></td><td style="text-align: left">波动率计算指标类型，如 <code>"rk_th2"</code>, <code>"rv5"</code>, <code>"rv10"</code> 等</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="6-oxford-man-研究所-realized-volatility-简易数据"><a class="header" href="#6-oxford-man-研究所-realized-volatility-简易数据">6. Oxford-Man 研究所 Realized Volatility 简易数据</a></h2>
+<p>获取 Oxford-Man 研究所首页的实际波动率简化折线数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_oman_rv_short</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-5"><a class="header" href="#请求参数-5">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"FTSE"</code></td><td style="text-align: left">指数/资产代码</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="7-修大成-risk-lab-realized-volatility-数据"><a class="header" href="#7-修大成-risk-lab-realized-volatility-数据">7. 修大成 Risk Lab Realized Volatility 数据</a></h2>
+<p>获取芝加哥大学修大成教授团队 Risk Lab 的资产实际波动率数据。</p>
+<ul>
+<li><strong>URL</strong>: <code>/api/v1/ak/article_rlab_rv</code></li>
+<li><strong>Method</strong>: <code>GET</code></li>
+<li><strong>Auth</strong>: 需要 Bearer Token</li>
+</ul>
+<h3 id="请求参数-6"><a class="header" href="#请求参数-6">请求参数</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">参数名</th><th style="text-align: left">类型</th><th style="text-align: left">必填</th><th style="text-align: left">默认值</th><th style="text-align: left">说明</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>symbol</code></td><td style="text-align: left"><code>string</code></td><td style="text-align: left">否</td><td style="text-align: left"><code>"39693"</code></td><td style="text-align: left">股票/品种 Ticker 代号</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="响应示例-2"><a class="header" href="#响应示例-2">响应示例</a></h3>
+<pre><code class="language-json">{
+  "success": true,
+  "data": [
+    {
+      "date": "1996-01-02",
+      "value": 0.1234
+    },
+    {
+      "date": "1996-01-04",
+      "value": 0.5678
+    }
+  ],
+  "error": null
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../health.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="ak/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../ak/bank.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -212,11 +382,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../health.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="ak/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../ak/bank.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
@@ -236,13 +406,13 @@
         </script>
 
 
-        <script src="elasticlunr-ef4e11c1.min.js"></script>
-        <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-09f2665d.js"></script>
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
-        <script src="clipboard-1626706a.min.js"></script>
-        <script src="highlight-abc7f01d.js"></script>
-        <script src="book-609e4cb8.js"></script>
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 
