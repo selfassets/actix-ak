@@ -149,6 +149,26 @@ pub async fn get_macro_usa_gdp() -> Result<Vec<MacroItem>, String> {
     fetch_jin10_macro_report("4").await
 }
 
+/// 12. 中国央行基准利率决议
+pub async fn get_macro_bank_china_interest_rate() -> Result<Vec<MacroItem>, String> {
+    fetch_jin10_macro_report("65").await
+}
+
+/// 13. 美联储基准利率决议
+pub async fn get_macro_bank_usa_interest_rate() -> Result<Vec<MacroItem>, String> {
+    fetch_jin10_macro_report("13").await
+}
+
+/// 14. 欧洲央行基准利率决议
+pub async fn get_macro_bank_euro_interest_rate() -> Result<Vec<MacroItem>, String> {
+    fetch_jin10_macro_report("14").await
+}
+
+/// 15. 日本央行基准利率决议
+pub async fn get_macro_bank_japan_interest_rate() -> Result<Vec<MacroItem>, String> {
+    fetch_jin10_macro_report("15").await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

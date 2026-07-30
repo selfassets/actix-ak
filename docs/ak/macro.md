@@ -94,3 +94,36 @@
 - **Method**: `GET`
 - **Auth**: 需要 Bearer Token
 
+---
+
+## 12. 中国央行基准利率决议数据
+
+- **URL**: `/api/v1/ak/macro/bank_china_interest_rate`
+- **Method**: `GET`
+- **Auth**: 需要 Bearer Token
+
+---
+
+## 13. 美联储基准利率决议数据
+
+- **URL**: `/api/v1/ak/macro/bank_usa_interest_rate`
+- **Method**: `GET`
+- **Auth**: 需要 Bearer Token
+
+---
+
+## 14. 欧洲央行基准利率决议数据
+
+- **URL**: `/api/v1/ak/macro/bank_euro_interest_rate`
+- **Method**: `GET`
+- **Auth**: 需要 Bearer Token
+
+---
+
+## 15. 日本央行基准利率决议数据
+
+- **URL**: `/api/v1/ak/macro/bank_japan_interest_rate`
+- **Method**: `GET`
+- **Auth**: 需要 Bearer Token
+
+

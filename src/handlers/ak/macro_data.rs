@@ -235,6 +235,90 @@ pub async fn get_macro_usa_gdp() -> Result<HttpResponse> {
     }
 }
 
+/// 获取中国央行基准利率决议数据
+///
+/// GET /api/v1/ak/macro/bank_china_interest_rate
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/macro/bank_china_interest_rate",
+        tag = "macro",
+        responses(
+            (status = 200, description = "成功获取中国央行利率数据", body = ApiResponse<Vec<MacroItem>>)
+        )
+    )
+)]
+pub async fn get_macro_bank_china_interest_rate() -> Result<HttpResponse> {
+    match macro_data::get_macro_bank_china_interest_rate().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
+/// 获取美联储基准利率决议数据
+///
+/// GET /api/v1/ak/macro/bank_usa_interest_rate
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/macro/bank_usa_interest_rate",
+        tag = "macro",
+        responses(
+            (status = 200, description = "成功获取美联储利率数据", body = ApiResponse<Vec<MacroItem>>)
+        )
+    )
+)]
+pub async fn get_macro_bank_usa_interest_rate() -> Result<HttpResponse> {
+    match macro_data::get_macro_bank_usa_interest_rate().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
+/// 获取欧洲央行基准利率决议数据
+///
+/// GET /api/v1/ak/macro/bank_euro_interest_rate
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/macro/bank_euro_interest_rate",
+        tag = "macro",
+        responses(
+            (status = 200, description = "成功获取欧洲央行利率数据", body = ApiResponse<Vec<MacroItem>>)
+        )
+    )
+)]
+pub async fn get_macro_bank_euro_interest_rate() -> Result<HttpResponse> {
+    match macro_data::get_macro_bank_euro_interest_rate().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
+/// 获取日本央行基准利率决议数据
+///
+/// GET /api/v1/ak/macro/bank_japan_interest_rate
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/macro/bank_japan_interest_rate",
+        tag = "macro",
+        responses(
+            (status = 200, description = "成功获取日本央行利率数据", body = ApiResponse<Vec<MacroItem>>)
+        )
+    )
+)]
+pub async fn get_macro_bank_japan_interest_rate() -> Result<HttpResponse> {
+    match macro_data::get_macro_bank_japan_interest_rate().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
 /// 配置宏观数据路由
 ///
 /// 挂载路径：/macro
@@ -254,6 +338,22 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                 web::get().to(get_macro_usa_unemployment),
             )
             .route("/usa_cpi", web::get().to(get_macro_usa_cpi))
-            .route("/usa_gdp", web::get().to(get_macro_usa_gdp)),
+            .route("/usa_gdp", web::get().to(get_macro_usa_gdp))
+            .route(
+                "/bank_china_interest_rate",
+                web::get().to(get_macro_bank_china_interest_rate),
+            )
+            .route(
+                "/bank_usa_interest_rate",
+                web::get().to(get_macro_bank_usa_interest_rate),
+            )
+            .route(
+                "/bank_euro_interest_rate",
+                web::get().to(get_macro_bank_euro_interest_rate),
+            )
+            .route(
+                "/bank_japan_interest_rate",
+                web::get().to(get_macro_bank_japan_interest_rate),
+            ),
     );
 }

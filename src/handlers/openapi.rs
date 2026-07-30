@@ -113,6 +113,10 @@ use utoipa::OpenApi;
         crate::handlers::ak::macro_data::get_macro_usa_unemployment,
         crate::handlers::ak::macro_data::get_macro_usa_cpi,
         crate::handlers::ak::macro_data::get_macro_usa_gdp,
+        crate::handlers::ak::macro_data::get_macro_bank_china_interest_rate,
+        crate::handlers::ak::macro_data::get_macro_bank_usa_interest_rate,
+        crate::handlers::ak::macro_data::get_macro_bank_euro_interest_rate,
+        crate::handlers::ak::macro_data::get_macro_bank_japan_interest_rate,
         // 股票接口
         crate::handlers::stock::list_stocks,
         crate::handlers::stock::get_stock_info,

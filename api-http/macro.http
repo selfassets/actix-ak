@@ -59,3 +59,23 @@ Content-Type: application/json
 GET {{baseUrl}}/ak/macro/usa_gdp
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+### 中国央行基准利率决议
+GET {{baseUrl}}/ak/macro/bank_china_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美联储基准利率决议
+GET {{baseUrl}}/ak/macro/bank_usa_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 欧洲央行基准利率决议
+GET {{baseUrl}}/ak/macro/bank_euro_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 日本央行基准利率决议
+GET {{baseUrl}}/ak/macro/bank_japan_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
