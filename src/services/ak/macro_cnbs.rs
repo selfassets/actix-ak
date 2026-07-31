@@ -1,8 +1,6 @@
 //! 国家统计局与国家杠杆率，外汇投机情绪服务
 
 use crate::models::ak::macro_data::MacroItem;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 
 /// 117. 国家金融与发展实验室 - 中国宏观杠杆率数据
@@ -30,7 +28,7 @@ pub async fn get_macro_cnbs() -> Result<Vec<MacroItem>, String> {
         .map_err(|e| format!("读取字节流失败: {}", e))?;
 
     // 用 calamine 解析 excel file 并构造 MacroItem
-    use calamine::{RangeDeserializerBuilder, Reader, Xlsx};
+    use calamine::{Reader, Xlsx};
     use std::io::Cursor;
 
     let mut excel: Xlsx<_> = calamine::open_workbook_from_rs(Cursor::new(bytes))
@@ -70,7 +68,7 @@ pub async fn get_macro_cnbs() -> Result<Vec<MacroItem>, String> {
                         "Non financial sector" => "实体经济部门",
                         "Financial sector(asset side)" => "金融部门资产方",
                         "Financial sector(liability side)" => "金融部门负债方",
-                        other => col_name,
+                        _other => col_name,
                     };
                     data.insert(mapped_name.to_string(), json_val);
                 }

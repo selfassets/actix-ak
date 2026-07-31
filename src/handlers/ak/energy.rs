@@ -3,7 +3,6 @@
 use crate::models::{ak::energy::EnergyOilQuery, ApiResponse};
 use crate::services::ak::energy;
 use actix_web::{web, HttpResponse, Result};
-use serde_json::Value;
 
 /// 获取汽柴油历史调价信息
 ///

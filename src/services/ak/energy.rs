@@ -1,6 +1,5 @@
 //! 能源 (Energy) 相关数据服务
 
-use crate::models::ak::energy::{EnergyItem, EnergyOilQuery};
 use serde_json::Value;
 
 /// 全国汽柴油历史调价信息

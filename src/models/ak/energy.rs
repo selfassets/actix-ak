@@ -11,6 +11,7 @@ pub struct EnergyOilQuery {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[allow(dead_code)]
 pub struct EnergyItem {
     pub date: String,
     pub symbol: String,
