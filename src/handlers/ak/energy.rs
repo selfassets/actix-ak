@@ -74,6 +74,69 @@ pub async fn get_energy_carbon_domestic(query: web::Query<EnergyOilQuery>) -> Re
     }
 }
 
+/// 获取北京碳交易所公开交易数据
+///
+/// GET /api/v1/ak/energy_carbon_bj
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/energy_carbon_bj",
+        tag = "energy",
+        responses(
+            (status = 200, description = "成功", body = ApiResponse<Vec<Value>>)
+        )
+    )
+)]
+pub async fn get_energy_carbon_bj() -> Result<HttpResponse> {
+    match energy::energy_carbon_bj().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
+/// 获取深圳地区国内碳交易所交易数据
+///
+/// GET /api/v1/ak/energy_carbon_sz
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/energy_carbon_sz",
+        tag = "energy",
+        responses(
+            (status = 200, description = "成功", body = ApiResponse<Vec<Value>>)
+        )
+    )
+)]
+pub async fn get_energy_carbon_sz() -> Result<HttpResponse> {
+    match energy::energy_carbon_sz().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
+/// 获取欧盟国际碳情交易数据
+///
+/// GET /api/v1/ak/energy_carbon_eu
+#[cfg_attr(
+    feature = "swagger",
+    utoipa::path(
+        get,
+        path = "/ak/energy_carbon_eu",
+        tag = "energy",
+        responses(
+            (status = 200, description = "成功", body = ApiResponse<Vec<Value>>)
+        )
+    )
+)]
+pub async fn get_energy_carbon_eu() -> Result<HttpResponse> {
+    match energy::energy_carbon_eu().await {
+        Ok(data) => Ok(HttpResponse::Ok().json(ApiResponse::success(data))),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ApiResponse::<()>::error(err))),
+    }
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/energy")
@@ -82,6 +145,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route(
                 "/carbon_domestic",
                 web::get().to(get_energy_carbon_domestic),
-            ),
+            )
+            .route("/carbon_bj", web::get().to(get_energy_carbon_bj))
+            .route("/carbon_sz", web::get().to(get_energy_carbon_sz))
+            .route("/carbon_eu", web::get().to(get_energy_carbon_eu)),
     );
 }

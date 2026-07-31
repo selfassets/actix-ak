@@ -106,3 +106,142 @@ pub async fn energy_carbon_domestic(symbol: &str) -> Result<Vec<Value>, String> 
         Err(format!("找不到交易地点 {}", symbol))
     }
 }
+
+/// 4. 北京市碳排放交易公开交易行情
+pub async fn energy_carbon_bj() -> Result<Vec<Value>, String> {
+    let url = "https://www.bjets.com.cn/article/jyxx/";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0")
+        .build()
+        .map_err(|e| format!("Error Client: {}", e))?;
+
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求北京碳交易市场失败: {}", e))?;
+
+    let text = res.text().await.map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+
+    // 采用 scraper 高效提取 table 行
+    let document = scraper::Html::parse_document(&text);
+    let row_selector = scraper::Selector::parse("table tr").unwrap();
+    let cell_selector = scraper::Selector::parse("td, th").unwrap();
+
+    let mut is_header = true;
+    for row in document.select(&row_selector) {
+        let cells: Vec<String> = row
+            .select(&cell_selector)
+            .map(|c| c.text().collect::<Vec<_>>().join("").trim().to_string())
+            .collect();
+
+        if is_header || cells.is_empty() {
+            is_header = false;
+            continue;
+        }
+
+        if cells.len() >= 4 {
+            let mut data = serde_json::Map::new();
+            data.insert("日期".to_string(), Value::String(cells[0].clone()));
+            data.insert("成交量".to_string(), Value::String(cells[1].clone()));
+            data.insert("成交均价".to_string(), Value::String(cells[2].clone()));
+            data.insert("成交额".to_string(), Value::String(cells[3].clone()));
+            result.push(Value::Object(data));
+        }
+    }
+
+    Ok(result)
+}
+
+/// 5. 深圳碳交易中心 - 国内碳排行情数据
+pub async fn energy_carbon_sz() -> Result<Vec<Value>, String> {
+    let url = "http://www.cerx.cn/dailynewsCN/index.htm";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0")
+        .build()
+        .map_err(|e| format!("Error Client: {}", e))?;
+
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求深圳碳排放行情失败: {}", e))?;
+
+    let text = res.text().await.map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+
+    let document = scraper::Html::parse_document(&text);
+    let row_selector = scraper::Selector::parse("table tr").unwrap();
+    let cell_selector = scraper::Selector::parse("td, th").unwrap();
+
+    let mut is_header = true;
+    for row in document.select(&row_selector) {
+        let cells: Vec<String> = row
+            .select(&cell_selector)
+            .map(|c| c.text().collect::<Vec<_>>().join("").trim().to_string())
+            .collect();
+
+        if is_header || cells.is_empty() {
+            is_header = false;
+            continue;
+        }
+
+        if cells.len() >= 8 {
+            let mut data = serde_json::Map::new();
+            data.insert("交易日期".to_string(), Value::String(cells[0].clone()));
+            data.insert("收盘价".to_string(), Value::String(cells[4].clone()));
+            data.insert("成交量".to_string(), Value::String(cells[6].clone()));
+            data.insert("成交额".to_string(), Value::String(cells[7].clone()));
+            result.push(Value::Object(data));
+        }
+    }
+
+    Ok(result)
+}
+
+/// 6. 深圳碳交易中心 - 国际碳情 (欧洲能源等)
+pub async fn energy_carbon_eu() -> Result<Vec<Value>, String> {
+    let url = "http://www.cerx.cn/dailynewsOuter/index.htm";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0")
+        .build()
+        .map_err(|e| format!("Error Client: {}", e))?;
+
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("请求欧盟国际碳情失败: {}", e))?;
+
+    let text = res.text().await.map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+
+    let document = scraper::Html::parse_document(&text);
+    let row_selector = scraper::Selector::parse("table tr").unwrap();
+    let cell_selector = scraper::Selector::parse("td, th").unwrap();
+
+    let mut is_header = true;
+    for row in document.select(&row_selector) {
+        let cells: Vec<String> = row
+            .select(&cell_selector)
+            .map(|c| c.text().collect::<Vec<_>>().join("").trim().to_string())
+            .collect();
+
+        if is_header || cells.is_empty() {
+            is_header = false;
+            continue;
+        }
+
+        if cells.len() >= 8 {
+            let mut data = serde_json::Map::new();
+            data.insert("交易日期".to_string(), Value::String(cells[0].clone()));
+            data.insert("收盘价".to_string(), Value::String(cells[4].clone()));
+            data.insert("成交量".to_string(), Value::String(cells[6].clone()));
+            data.insert("成交额".to_string(), Value::String(cells[7].clone()));
+            result.push(Value::Object(data));
+        }
+    }
+
+    Ok(result)
+}

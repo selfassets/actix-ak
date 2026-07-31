@@ -8,6 +8,9 @@ pub mod cal;
 pub mod crypto;
 pub mod currency;
 pub mod energy;
+pub mod forex;
+pub mod fortune;
+pub mod fund;
 pub mod interest_rate;
 pub mod macro_data;
 

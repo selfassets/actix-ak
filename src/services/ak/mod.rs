@@ -2,15 +2,20 @@
 //!
 //! 提供 AK 模块核心数据的获取与处理逻辑
 
+pub mod baidu_cons;
 pub mod bank;
 pub mod bond;
 pub mod cal;
 pub mod crypto;
 pub mod currency;
 pub mod energy;
+pub mod forex;
+pub mod fortune;
+pub mod fund;
 pub mod interest_rate;
 pub mod macro_cnbs;
 pub mod macro_data;
+pub mod migration;
 
 use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};
 use calamine::{DataType, Reader, Xlsx};
