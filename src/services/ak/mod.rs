@@ -7,7 +7,9 @@ pub mod bond;
 pub mod cal;
 pub mod crypto;
 pub mod currency;
+pub mod energy;
 pub mod interest_rate;
+pub mod macro_cnbs;
 pub mod macro_data;
 
 use crate::models::ak::{AkInfo, EpuIndexItem, FredItem, VolatilityItem};

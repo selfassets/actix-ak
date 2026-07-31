@@ -79,3 +79,82 @@ Content-Type: application/json
 GET {{baseUrl}}/ak/macro/bank_japan_interest_rate
 Authorization: Bearer {{token}}
 Content-Type: application/json
+### 新西兰联储利率决议
+GET {{baseUrl}}/ak/macro/bank_newzealand_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 瑞士央行利率决议
+GET {{baseUrl}}/ak/macro/bank_switzerland_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 英国央行利率决议
+GET {{baseUrl}}/ak/macro/bank_english_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 澳洲联储利率决议
+GET {{baseUrl}}/ak/macro/bank_australia_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 俄罗斯央行利率决议
+GET {{baseUrl}}/ak/macro/bank_russia_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 印度央行利率决议
+GET {{baseUrl}}/ak/macro/bank_india_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 巴西央行利率决议
+GET {{baseUrl}}/ak/macro/bank_brazil_interest_rate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国出口年率
+GET {{baseUrl}}/ak/macro/china_exports_yoy
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国进口年率
+GET {{baseUrl}}/ak/macro/china_imports_yoy
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国贸易帐
+GET {{baseUrl}}/ak/macro/china_trade_balance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 中国工业增加值年率
+GET {{baseUrl}}/ak/macro/china_industrial_production_yoy
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国 ADP 就业人数
+GET {{baseUrl}}/ak/macro/usa_adp_employment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国初请失业金人数
+GET {{baseUrl}}/ak/macro/usa_initial_jobless
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 美国 PPI 生产者物价指数
+GET {{baseUrl}}/ak/macro/usa_ppi
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 欧元区 GDP 季率
+GET {{baseUrl}}/ak/macro/euro_gdp_yoy
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 黄金 ETF 持仓
+GET {{baseUrl}}/ak/macro/cons_gold
+Authorization: Bearer {{token}}
+Content-Type: application/json
