@@ -295,6 +295,8 @@ use utoipa::OpenApi;
         crate::handlers::ak::fund::get_fund_report_asset_allocation_cninfo,
         crate::handlers::ak::fund::get_fund_report_stock_cninfo,
         crate::handlers::ak::fund::get_fund_stock_position_lg,
+        crate::handlers::ak::fund::get_fund_balance_position_lg,
+        crate::handlers::ak::fund::get_fund_linghuo_position_lg,
         crate::handlers::ak::fund::get_fund_rating_sh,
         crate::handlers::ak::fund::get_fund_rating_zs,
         crate::handlers::ak::fund::get_fund_rating_ja,

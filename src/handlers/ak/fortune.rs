@@ -1,7 +1,6 @@
 //! 富豪排行榜 (Fortune) 相关 HTTP 处理器
 
 use crate::models::ak::fortune::FortuneRankQuery;
-use crate::models::ak::macro_data::MacroItem;
 use crate::models::ApiResponse;
 use crate::services::ak::fortune;
 use actix_web::{web, HttpResponse, Result};

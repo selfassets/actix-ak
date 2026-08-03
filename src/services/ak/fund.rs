@@ -1407,7 +1407,7 @@ pub async fn fund_balance_position_lg() -> Result<Vec<MacroItem>, String> {
         .get(url)
         .send()
         .await
-        .map_err(|e| format!("请求混合型基金仓位失败: {}", e))?;
+        .map_err(|e| format!("请求混合型基金仓位测算失败: {}", e))?;
 
     let text = res.text().await.map_err(|e| e.to_string())?;
     let mut result = Vec::new();
@@ -1452,7 +1452,7 @@ pub async fn fund_linghuo_position_lg() -> Result<Vec<MacroItem>, String> {
         .get(url)
         .send()
         .await
-        .map_err(|e| format!("请求灵活配置型基金仓位失败: {}", e))?;
+        .map_err(|e| format!("请求灵活配置型基金仓位测算失败: {}", e))?;
 
     let text = res.text().await.map_err(|e| e.to_string())?;
     let mut result = Vec::new();

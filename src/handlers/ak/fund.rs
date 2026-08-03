@@ -1502,6 +1502,14 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                 "/stock_position_lg",
                 web::get().to(get_fund_stock_position_lg),
             )
+            .route(
+                "/balance_position_lg",
+                web::get().to(get_fund_balance_position_lg),
+            )
+            .route(
+                "/linghuo_position_lg",
+                web::get().to(get_fund_linghuo_position_lg),
+            )
             .route("/rating_sh", web::get().to(get_fund_rating_sh))
             .route("/rating_zs", web::get().to(get_fund_rating_zs))
             .route("/rating_ja", web::get().to(get_fund_rating_ja))

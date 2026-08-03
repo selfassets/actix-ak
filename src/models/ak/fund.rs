@@ -8,6 +8,7 @@ pub struct FundQuery {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[allow(dead_code)]
 pub struct FundIndexQuery {
     pub symbol: Option<String>,
     pub indicator: Option<String>,
