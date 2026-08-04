@@ -11,6 +11,7 @@ pub mod energy;
 pub mod forex;
 pub mod fortune;
 pub mod fund;
+pub mod futures_settle;
 pub mod interest_rate;
 pub mod macro_cnbs;
 pub mod macro_data;
@@ -223,6 +224,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .configure(forex::config)
             .configure(fortune::config)
             .configure(fund::config)
+            .configure(futures_settle::config)
             .configure(macro_cnbs::config)
             .configure(migration::config)
             .configure(macro_data::config),

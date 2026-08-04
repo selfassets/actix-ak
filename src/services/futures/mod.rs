@@ -29,6 +29,7 @@ mod inventory;
 mod kline;
 mod main_contract;
 mod position_rank;
+pub mod settle;
 mod sina;
 mod spot;
 mod warehouse;
@@ -37,10 +38,14 @@ mod warehouse;
 pub use common::get_beijing_time;
 pub use fees::{get_futures_comm_info, get_futures_fees_info, get_futures_rule};
 pub use foreign::{
-    get_foreign_futures_realtime, get_foreign_futures_symbols, get_futures_foreign_detail,
-    get_futures_foreign_hist,
+    futures_global_spot_em, get_foreign_futures_realtime, get_foreign_futures_symbols,
+    get_futures_foreign_detail, get_futures_foreign_hist,
 };
-pub use inventory::{get_99_symbol_map, get_futures_inventory_99};
+pub use inventory::{
+    futures_comex_inventory, futures_index_ccidx, futures_inventory_em, futures_news_shmet,
+    futures_rule_em, futures_settlement_price_sgx, futures_spot_stock, get_99_symbol_map,
+    get_futures_inventory_99,
+};
 pub use kline::{get_futures_history, get_futures_minute_data};
 pub use main_contract::{
     get_futures_display_main_sina, get_futures_hold_pos_sina, get_futures_main_sina,
@@ -54,12 +59,17 @@ pub use spot::{
 pub use position_rank::{
     futures_dce_position_rank, futures_dce_position_rank_other, futures_gfex_position_rank,
     futures_hold_pos_sina as futures_hold_pos_sina_rank, get_cffex_rank_table, get_dce_rank_table,
-    get_gfex_rank_table, get_gfex_vars_list, get_rank_sum, get_rank_sum_daily,
-    get_rank_table_czce, get_shfe_rank_table,
+    get_gfex_rank_table, get_gfex_vars_list, get_rank_sum, get_rank_sum_daily, get_rank_table_czce,
+    get_shfe_rank_table,
+};
+pub use settle::{
+    futures_settle_cffex, futures_settle_czce, futures_settle_dce, futures_settle_gfex,
+    futures_settle_ine, futures_settle_shfe, futures_to_spot_czce, futures_to_spot_dce,
+    futures_to_spot_shfe,
 };
 
 // 仓单日报相关（公共 API，暂未在 handlers 中使用）
 pub use warehouse::{
-    futures_gfex_warehouse_receipt, futures_shfe_warehouse_receipt,
-    futures_warehouse_receipt_czce, futures_warehouse_receipt_dce,
+    futures_gfex_warehouse_receipt, futures_shfe_warehouse_receipt, futures_warehouse_receipt_czce,
+    futures_warehouse_receipt_dce,
 };

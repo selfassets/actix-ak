@@ -1,11 +1,16 @@
 //! 外盘期货相关
 
-use crate::models::{ForeignFuturesDetail, ForeignFuturesDetailItem, ForeignFuturesHistData, ForeignFuturesSymbol, FuturesInfo};
+use crate::models::ak::macro_data::MacroItem;
+use crate::models::{
+    ForeignFuturesDetail, ForeignFuturesDetailItem, ForeignFuturesHistData, ForeignFuturesSymbol,
+    FuturesInfo,
+};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use chrono_tz::Asia::Shanghai;
 use regex::Regex;
 use reqwest::Client;
+use serde_json::Value;
 use std::collections::HashMap;
 
 use super::common::{get_beijing_time, SINA_FOREIGN_DAILY_API, SINA_FUTURES_REALTIME_API};
@@ -14,34 +19,118 @@ use super::common::{get_beijing_time, SINA_FOREIGN_DAILY_API, SINA_FUTURES_REALT
 /// 对应 akshare 的 futures_hq_subscribe_exchange_symbol() 函数
 pub fn get_foreign_futures_symbols() -> Vec<ForeignFuturesSymbol> {
     vec![
-        ForeignFuturesSymbol { symbol: "新加坡铁矿石".to_string(), code: "FEF".to_string() },
-        ForeignFuturesSymbol { symbol: "马棕油".to_string(), code: "FCPO".to_string() },
-        ForeignFuturesSymbol { symbol: "日橡胶".to_string(), code: "RSS3".to_string() },
-        ForeignFuturesSymbol { symbol: "美国原糖".to_string(), code: "RS".to_string() },
-        ForeignFuturesSymbol { symbol: "CME比特币期货".to_string(), code: "BTC".to_string() },
-        ForeignFuturesSymbol { symbol: "NYBOT-棉花".to_string(), code: "CT".to_string() },
-        ForeignFuturesSymbol { symbol: "LME镍3个月".to_string(), code: "NID".to_string() },
-        ForeignFuturesSymbol { symbol: "LME铅3个月".to_string(), code: "PBD".to_string() },
-        ForeignFuturesSymbol { symbol: "LME锡3个月".to_string(), code: "SND".to_string() },
-        ForeignFuturesSymbol { symbol: "LME锌3个月".to_string(), code: "ZSD".to_string() },
-        ForeignFuturesSymbol { symbol: "LME铝3个月".to_string(), code: "AHD".to_string() },
-        ForeignFuturesSymbol { symbol: "LME铜3个月".to_string(), code: "CAD".to_string() },
-        ForeignFuturesSymbol { symbol: "CBOT-黄豆".to_string(), code: "S".to_string() },
-        ForeignFuturesSymbol { symbol: "CBOT-小麦".to_string(), code: "W".to_string() },
-        ForeignFuturesSymbol { symbol: "CBOT-玉米".to_string(), code: "C".to_string() },
-        ForeignFuturesSymbol { symbol: "CBOT-黄豆油".to_string(), code: "BO".to_string() },
-        ForeignFuturesSymbol { symbol: "CBOT-黄豆粉".to_string(), code: "SM".to_string() },
-        ForeignFuturesSymbol { symbol: "COMEX铜".to_string(), code: "HG".to_string() },
-        ForeignFuturesSymbol { symbol: "NYMEX天然气".to_string(), code: "NG".to_string() },
-        ForeignFuturesSymbol { symbol: "NYMEX原油".to_string(), code: "CL".to_string() },
-        ForeignFuturesSymbol { symbol: "COMEX白银".to_string(), code: "SI".to_string() },
-        ForeignFuturesSymbol { symbol: "COMEX黄金".to_string(), code: "GC".to_string() },
-        ForeignFuturesSymbol { symbol: "布伦特原油".to_string(), code: "OIL".to_string() },
-        ForeignFuturesSymbol { symbol: "伦敦金".to_string(), code: "XAU".to_string() },
-        ForeignFuturesSymbol { symbol: "伦敦银".to_string(), code: "XAG".to_string() },
-        ForeignFuturesSymbol { symbol: "伦敦铂金".to_string(), code: "XPT".to_string() },
-        ForeignFuturesSymbol { symbol: "伦敦钯金".to_string(), code: "XPD".to_string() },
-        ForeignFuturesSymbol { symbol: "欧洲碳排放".to_string(), code: "EUA".to_string() },
+        ForeignFuturesSymbol {
+            symbol: "新加坡铁矿石".to_string(),
+            code: "FEF".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "马棕油".to_string(),
+            code: "FCPO".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "日橡胶".to_string(),
+            code: "RSS3".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "美国原糖".to_string(),
+            code: "RS".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CME比特币期货".to_string(),
+            code: "BTC".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "NYBOT-棉花".to_string(),
+            code: "CT".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME镍3个月".to_string(),
+            code: "NID".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME铅3个月".to_string(),
+            code: "PBD".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME锡3个月".to_string(),
+            code: "SND".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME锌3个月".to_string(),
+            code: "ZSD".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME铝3个月".to_string(),
+            code: "AHD".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "LME铜3个月".to_string(),
+            code: "CAD".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CBOT-黄豆".to_string(),
+            code: "S".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CBOT-小麦".to_string(),
+            code: "W".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CBOT-玉米".to_string(),
+            code: "C".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CBOT-黄豆油".to_string(),
+            code: "BO".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "CBOT-黄豆粉".to_string(),
+            code: "SM".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "COMEX铜".to_string(),
+            code: "HG".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "NYMEX天然气".to_string(),
+            code: "NG".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "NYMEX原油".to_string(),
+            code: "CL".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "COMEX白银".to_string(),
+            code: "SI".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "COMEX黄金".to_string(),
+            code: "GC".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "布伦特原油".to_string(),
+            code: "OIL".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "伦敦金".to_string(),
+            code: "XAU".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "伦敦银".to_string(),
+            code: "XAG".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "伦敦铂金".to_string(),
+            code: "XPT".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "伦敦钯金".to_string(),
+            code: "XPD".to_string(),
+        },
+        ForeignFuturesSymbol {
+            symbol: "欧洲碳排放".to_string(),
+            code: "EUA".to_string(),
+        },
     ]
 }
 
@@ -73,7 +162,10 @@ pub async fn get_foreign_futures_realtime(codes: &[String]) -> Result<Vec<Future
         .header("Host", "hq.sinajs.cn")
         .header("Pragma", "no-cache")
         .header("Referer", "https://finance.sina.com.cn/")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        )
         .send()
         .await?;
 
@@ -178,7 +270,10 @@ pub async fn get_futures_foreign_hist(symbol: &str) -> Result<Vec<ForeignFutures
         .get(&url)
         .query(&[("symbol", symbol), ("_", &today), ("source", "web")])
         .header("Referer", "https://finance.sina.com.cn/")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        )
         .send()
         .await?;
 
@@ -219,28 +314,44 @@ fn parse_foreign_hist_data(data: &str) -> Result<Vec<ForeignFuturesHistData>> {
                         .as_str()
                         .or_else(|| item["open"].as_f64().map(|_| ""))
                         .and_then(|s| {
-                            if s.is_empty() { item["open"].as_f64() } else { s.parse().ok() }
+                            if s.is_empty() {
+                                item["open"].as_f64()
+                            } else {
+                                s.parse().ok()
+                            }
                         })
                         .unwrap_or(0.0),
                     high: item["high"]
                         .as_str()
                         .or_else(|| item["high"].as_f64().map(|_| ""))
                         .and_then(|s| {
-                            if s.is_empty() { item["high"].as_f64() } else { s.parse().ok() }
+                            if s.is_empty() {
+                                item["high"].as_f64()
+                            } else {
+                                s.parse().ok()
+                            }
                         })
                         .unwrap_or(0.0),
                     low: item["low"]
                         .as_str()
                         .or_else(|| item["low"].as_f64().map(|_| ""))
                         .and_then(|s| {
-                            if s.is_empty() { item["low"].as_f64() } else { s.parse().ok() }
+                            if s.is_empty() {
+                                item["low"].as_f64()
+                            } else {
+                                s.parse().ok()
+                            }
                         })
                         .unwrap_or(0.0),
                     close: item["close"]
                         .as_str()
                         .or_else(|| item["close"].as_f64().map(|_| ""))
                         .and_then(|s| {
-                            if s.is_empty() { item["close"].as_f64() } else { s.parse().ok() }
+                            if s.is_empty() {
+                                item["close"].as_f64()
+                            } else {
+                                s.parse().ok()
+                            }
                         })
                         .unwrap_or(0.0),
                     volume: item["volume"]
@@ -261,12 +372,18 @@ fn parse_foreign_hist_data(data: &str) -> Result<Vec<ForeignFuturesHistData>> {
 pub async fn get_futures_foreign_detail(symbol: &str) -> Result<ForeignFuturesDetail> {
     let client = Client::new();
 
-    let url = format!("https://finance.sina.com.cn/futures/quotes/{}.shtml", symbol);
+    let url = format!(
+        "https://finance.sina.com.cn/futures/quotes/{}.shtml",
+        symbol
+    );
     println!("📡 请求外盘期货合约详情 URL: {}", url);
 
     let response = client
         .get(&url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        )
         .send()
         .await?;
 
@@ -287,7 +404,11 @@ fn parse_foreign_detail_html(html: &str) -> Result<ForeignFuturesDetail> {
     let table_re = Regex::new(r"<table[^>]*>([\s\S]*?)</table>").unwrap();
     let tables: Vec<_> = table_re.captures_iter(html).collect();
 
-    let target_table_index = if tables.len() > 6 { 6 } else { tables.len().saturating_sub(1) };
+    let target_table_index = if tables.len() > 6 {
+        6
+    } else {
+        tables.len().saturating_sub(1)
+    };
 
     if tables.is_empty() {
         return Err(anyhow!("未找到合约详情表格"));
@@ -327,7 +448,10 @@ fn parse_foreign_detail_html(html: &str) -> Result<ForeignFuturesDetail> {
                 let value2 = cells[3].clone();
 
                 if !name2.is_empty() && !value2.is_empty() {
-                    items.push(ForeignFuturesDetailItem { name: name2, value: value2 });
+                    items.push(ForeignFuturesDetailItem {
+                        name: name2,
+                        value: value2,
+                    });
                 }
             }
         }
@@ -335,4 +459,64 @@ fn parse_foreign_detail_html(html: &str) -> Result<ForeignFuturesDetail> {
 
     println!("📊 解析到 {} 条合约详情项", items.len());
     Ok(ForeignFuturesDetail { items })
+}
+
+/// 东方财富 - 国际外盘期货实时行情全量
+pub async fn futures_global_spot_em() -> Result<Vec<MacroItem>, String> {
+    let url = "https://futsseapi.eastmoney.com/list/COMEX,NYMEX,COBOT,SGX,NYBOT,LME,MDEX,TOCOM,IPE";
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0")
+        .build()
+        .map_err(|e| format!("构建 HTTP 客户端失败: {}", e))?;
+
+    let res = client
+        .get(url)
+        .query(&[
+            ("orderBy", "dm"),
+            ("sort", "desc"),
+            ("pageSize", "500"),
+            ("pageIndex", "0"),
+            ("token", "58b2fa8f54638b60b87d69b31969089c"),
+            (
+                "field",
+                "dm,sc,name,p,zsjd,zde,zdf,f152,o,h,l,zjsj,vol,wp,np,ccl",
+            ),
+        ])
+        .send()
+        .await
+        .map_err(|e| format!("请求东财外盘期货实时行情失败: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("东财外盘接口错误: {}", res.status()));
+    }
+
+    let json_val: Value = res.json().await.map_err(|e| e.to_string())?;
+    let arr = json_val["list"].as_array().ok_or("缺失 list 数组")?;
+
+    let mut result = Vec::new();
+    for row in arr {
+        let mut data = HashMap::new();
+        if let Some(obj) = row.as_object() {
+            for (k, v) in obj {
+                let name = match k.as_str() {
+                    "dm" => "代码",
+                    "name" => "名称",
+                    "p" => "最新价",
+                    "zde" => "涨跌额",
+                    "zdf" => "涨跌幅",
+                    "o" => "今开",
+                    "h" => "最高",
+                    "l" => "最低",
+                    "zjsj" => "昨结",
+                    "vol" => "成交量",
+                    "ccl" => "持仓量",
+                    _ => k,
+                };
+                data.insert(name.to_string(), v.clone());
+            }
+        }
+        result.push(MacroItem { data });
+    }
+
+    Ok(result)
 }
